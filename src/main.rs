@@ -14,7 +14,7 @@ fn main() {
 #[must_use]
 pub fn App() -> impl IntoView {
     view! {
-        <div class="flex flex-col h-full">
+        <div class="flex flex-col h-full bg-brown">
             <div data-tauri-drag-region class="fixed top-0 z-10 w-full bg-white h-30 cursor-grab" />
             <main class="flex flex-col justify-start flex-grow pt-10 m-0 bg-brown">
                 <div
