@@ -15,10 +15,10 @@ fn main() {
 pub fn App() -> impl IntoView {
     view! {
         <div class="flex flex-col h-full bg-brown">
-            <div data-tauri-drag-region class="fixed top-0 z-10 w-full h-8 cursor-grab" />
-            <main class="flex flex-col justify-start pt-10 grow bg-brown">
+            <div data-tauri-drag-region class="fixed top-0 z-10 w-full h-8 bg-white cursor-grab" />
+            <main class="flex flex-col justify-start pt-10 grow">
                 <div
-                    class="w-full h-full px-16 pt-4 font-mono text-base text-white outline-none caret-white bg-brown"
+                    class="w-full h-full px-16 pt-4 font-mono text-lg text-white outline-none caret-white"
                     contenteditable="true"
                     spellcheck="false"
                 ></div>
