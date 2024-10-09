@@ -1,17 +1,22 @@
 #![warn(clippy::pedantic, clippy::nursery)]
 #![allow(clippy::must_use_candidate)]
+use std::path::PathBuf;
+use std::str::FromStr;
+
 use codee::string::FromToStringCodec;
+use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use console_error_panic_hook::set_once;
 use leptos::ev::keydown;
 use leptos::{
-    component, create_action, create_rw_signal, event_target_value, window_event_listener,
-    AttributeValue, Children, CollectView, IntoView, SignalGetUntracked, SignalSet,
+    component, create_action, create_effect, create_rw_signal, event_target_value, provide_context,
+    spawn_local, use_context, window_event_listener, AttributeValue, Callback, Children,
+    CollectView, IntoView, RwSignal, SignalGetUntracked, SignalSet,
 };
 use leptos::{mount_to_body, view};
 use leptos_use::storage::use_local_storage;
-use serde_wasm_bindgen::to_value;
+use serde_wasm_bindgen::{from_value, to_value};
 use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsValue;
@@ -51,33 +56,73 @@ extern "C" {
     async fn invoke(cmd: &str, args: JsValue) -> JsValue;
 }
 
+struct Inter;
+
+#[allow(clippy::future_not_send)]
+impl Inter {
+    async fn call<R: DeserializeOwned>(cmd: &str, args: &impl Serialize) -> R {
+        from_value(invoke(cmd, to_value(args).unwrap()).await).unwrap()
+    }
+
+    async fn save_file(data: String, path: Option<String>) -> Option<String> {
+        #[derive(Serialize)]
+        struct SaveFileArgs {
+            data: String,
+            path: Option<String>,
+        }
+        Self::call("save_file", &SaveFileArgs { data, path }).await
+    }
+
+    async fn load_file(path: Option<String>) -> Option<String> {
+        #[derive(Serialize)]
+        struct LoadFileArgs {
+            path: Option<String>,
+        }
+        Self::call("load_file", &LoadFileArgs { path }).await
+    }
+
+    async fn quit() {
+        invoke_without_args("quit").await;
+    }
+}
+
 #[component]
 pub fn App() -> impl IntoView {
     let text = create_rw_signal(String::new());
+    provide_context(text);
+    view! {
+        <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
+            <div data-tauri-drag-region class="w-full h-8" />
+            <textarea
+                class="p-8 px-24 text-base bg-transparent outline-none resize-none size-full selection:bg-darkbrown"
+                prop:value=text
+                autocorrect="off"
+                on:input=move |event| {
+                    text.set(event_target_value(&event));
+                }
+            />
+            <StatusBar />
+        </Vertical>
+    }
+}
+
+#[component]
+fn StatusBar() -> impl IntoView {
+    let text: RwSignal<String> = use_context().unwrap();
     let (read_save_path, write_save_path, _) =
         use_local_storage::<String, FromToStringCodec>("save_path");
     let save = create_action(move |save_as| {
         let save_as: bool = *save_as;
         async move {
-            #[derive(Serialize)]
-            struct SaveFileArgs {
-                data: String,
-                path: Option<String>,
-            }
-            write_save_path(
-                invoke(
-                    "save_file",
-                    to_value(&SaveFileArgs {
-                        data: text.get_untracked(),
-                        path: Some(read_save_path.get_untracked())
-                            .filter(|path| !save_as && !path.is_empty()),
-                    })
-                    .unwrap(),
-                )
-                .await
-                .as_string()
-                .unwrap(),
-            );
+            let Some(path) = Inter::save_file(
+                text.get_untracked(),
+                Some(read_save_path.get_untracked()).filter(|path| !save_as && !path.is_empty()),
+            )
+            .await
+            else {
+                return;
+            };
+            write_save_path(path);
         }
     });
     window_event_listener(keydown, move |event| {
@@ -86,6 +131,17 @@ pub fn App() -> impl IntoView {
             save.dispatch(event.shift_key());
         }
     });
+    create_effect(move |_| {
+        spawn_local({
+            async move {
+                let Some(data) = Inter::load_file(Some(read_save_path.get_untracked())).await
+                else {
+                    return;
+                };
+                text.set(data);
+            }
+        });
+    });
 
     #[cfg(debug_assertions)]
     window_event_listener(leptos::ev::contextmenu, move |event| {
@@ -93,53 +149,76 @@ pub fn App() -> impl IntoView {
     });
 
     view! {
-        <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
-            <div data-tauri-drag-region class="w-full h-12" />
-            <textarea
-                class="p-8 px-24 text-base outline-none resize-none size-full bg-brown selection:bg-darkbrown"
-                autocorrect="off"
-                prop:value=text
-                on:input=move |event| {
-                    text.set(event_target_value(&event));
-                }
-            />
-            <div class="bg-brown text-base fixed inset-x-0 bottom-0 p-4 text-right select-none text-fade cursor-default select-none">
-                <Horizontal class="justify-between">
-                    <Horizontal gap=2>
-                        {[
-                            (vec!["c", "S"], "Save"),
-                            (vec!["c", "shift", "S"], "Save as"),
-                            (vec!["c", "Q"], "Quit"),
-                        ]
-                            .into_iter()
-                            .map(|(keys, action)| {
-                                view! {
-                                    {keys.join("-")}
-                                    <div class="text-red">{action}</div>
-                                }
-                            })
-                            .collect_view()}
-                    </Horizontal>
-                    <div class="relative *:transition group">
-                        {move || {
-                            let text = text();
-                            let lines = text.lines().count();
-                            let words = text.split_whitespace().count();
-                            let chars = text.graphemes(true).count();
-                            if chars > 0 {
-                                view! {
-                                    <div class="absolute bottom-0 right-0 truncate">
-                                        {format!("{lines}L {words}W {chars}C")}
-                                    </div>
-                                }
-                            } else {
-                                view! { <div></div> }
+        <div class="fixed inset-x-0 bottom-0 p-4 text-base text-right select-none text-fade">
+            <Horizontal class="justify-between">
+                {move || {
+                    PathBuf::from_str(&read_save_path())
+                        .ok()
+                        .map(|path| { path.to_string_lossy().to_string() })
+                }}
+                <Horizontal gap=2>
+                    {[
+                        (vec!["c", "S"], "Save", Callback::new(move |()| save.dispatch(false))),
+                        (
+                            vec!["c", "shift", "S"],
+                            "Save as",
+                            Callback::new(move |()| save.dispatch(true)),
+                        ),
+                        (
+                            vec!["c", "Q"],
+                            "Quit",
+                            Callback::new(move |()| spawn_local(Inter::quit())),
+                        ),
+                    ]
+                        .into_iter()
+                        .map(|(keys, name, action)| {
+                            view! {
+                                <button on:click=move |_| action(())>
+                                    <Horizontal gap=2 class="transition hover:brightness-150">
+                                        <div>{keys.join("-")}</div>
+                                        <div class="text-red">{name}</div>
+                                    </Horizontal>
+                                </button>
                             }
-                        }}
-                    </div>
-                </Horizontal>
+                        })
+                        .collect_view()}
+                </Horizontal> <Counter />
+            </Horizontal>
+        </div>
+    }
+}
+
+#[component]
+fn Counter() -> impl IntoView {
+    let text: RwSignal<String> = use_context().unwrap();
+    view! {
+        <div
+            class="relative *:transition group transition"
+            class=("opacity-0", move || text().is_empty())
+        >
+            <div class="absolute bottom-0 right-0 truncate group-hover:opacity-0">
+                {move || {
+                    let text = text();
+                    format!(
+                        "{lines}L {words}W {chars}C",
+                        lines = text.lines().count(),
+                        words = text.split_whitespace().count(),
+                        chars = text.graphemes(true).count(),
+                    )
+                }}
             </div>
-        </Vertical>
+            <div class="truncate opacity-0 group-hover:opacity-100">
+                {move || {
+                    let text = text();
+                    format!(
+                        "{lines} lines, {words} words, {chars} characters",
+                        lines = text.lines().count(),
+                        words = text.split_whitespace().count(),
+                        chars = text.graphemes(true).count(),
+                    )
+                }}
+            </div>
+        </div>
     }
 }
 
