@@ -3,6 +3,6 @@
 @tailwind utilities;
 
 @font-face {
-    font-family: "Mono", monospace;
-    src: url('./fonts/mono.ttf') format('truetype');
+    font-family: "Mono";
+    src: url('/fonts/mono.ttf');
 }
