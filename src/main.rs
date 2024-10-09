@@ -72,10 +72,11 @@ pub fn App() -> impl IntoView {
         save(text);
     });
     view! {
-        <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
+        <Vertical class="font-sans h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
             <div data-tauri-drag-region class="w-full h-8" />
             <textarea
-                class="p-8 px-24 text-base bg-transparent outline-none resize-none size-full selection:bg-darkbrown"
+                class="font-sans p-8 px-24 text-base bg-transparent outline-none resize-none size-full selection:bg-darkbrown"
+                autocorrect="off"
                 prop:value=text
                 on:input=move |event| {
                     text.set(event_target_value(&event));
