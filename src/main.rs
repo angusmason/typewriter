@@ -203,7 +203,7 @@ fn StatusBar() -> impl IntoView {
 
 #[component]
 fn Counter() -> impl IntoView {
-    let text: RwSignal<String> = use_context().unwrap();
+    let Context { text, .. } = use_context().unwrap();
     view! {
         <div class="relative *:transition group" class=("opacity-0", move || text().is_empty())>
             <div class="absolute bottom-0 right-0 truncate group-hover:opacity-0">
