@@ -36,7 +36,7 @@ pub fn App() -> impl IntoView {
         <div class="flex flex-col h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
             <div data-tauri-drag-region class="w-full h-8 cursor-grab" />
             <textarea
-                class="p-4 px-16 text-lg bg-transparent outline-none size-full"
+                class="p-4 px-16 text-lg bg-transparent outline-none size-full selection:bg-darkbrown overscroll-none"
                 prop:value=text
                 on:input=move |event| {
                     text.set(event_target_value(&event));

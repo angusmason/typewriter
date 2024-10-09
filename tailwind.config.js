@@ -11,6 +11,7 @@ module.exports = {
       },
       colors: {
         'brown': '#29272B',
+        'darkbrown': '#080809'
       },
     },
   },
