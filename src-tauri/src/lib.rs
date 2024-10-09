@@ -1,7 +1,7 @@
 use std::{fs::write, path};
 
 use rfd::FileDialog;
-use tauri::{command, generate_context, generate_handler, Builder, Manager};
+use tauri::{command, generate_context, generate_handler, AppHandle, Builder, Manager};
 use tauri_plugin_decorum::WebviewWindowExt;
 
 #[command]
@@ -19,6 +19,19 @@ fn save_file(data: String, path: Option<String>) -> Option<String> {
     Some(path)
 }
 
+#[command]
+fn load_file(path: Option<String>) -> Option<String> {
+    let path = match path {
+        Some(path) => path,
+        None => FileDialog::new().pick_file()?.to_str().unwrap().to_string(),
+    };
+    let data = std::fs::read_to_string(&path).unwrap();
+    Some(data)
+}
+
+#[command]
+fn close() {}
+
 #[cfg_attr(mobile, mobile_entry_point)]
 pub fn run() {
     Builder::default()
@@ -32,7 +45,7 @@ pub fn run() {
             }
             Ok(())
         })
-        .invoke_handler(generate_handler![save_file])
+        .invoke_handler(generate_handler![save_file, load_file, close])
         .run(generate_context!())
         .expect("error while running tauri application");
 }
