@@ -7,7 +7,7 @@ module.exports = {
     theme: {
       extend: {
         fontFamily: {
-          'mono': ["Mono"],
+          'sans': ["Mono"],
         },
         colors: {
             'brown': '#29272B',
