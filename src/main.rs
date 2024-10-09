@@ -73,9 +73,9 @@ pub fn App() -> impl IntoView {
     });
     view! {
         <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
-            <div data-tauri-drag-region class="w-full h-8 cursor-grab" />
+            <div data-tauri-drag-region class="w-full h-8" />
             <textarea
-                class="p-4 px-16 text-sm bg-transparent outline-none resize-none size-full selection:bg-darkbrown"
+                class="p-8 px-24 text-base bg-transparent outline-none resize-none size-full selection:bg-darkbrown"
                 prop:value=text
                 on:input=move |event| {
                     text.set(event_target_value(&event));
