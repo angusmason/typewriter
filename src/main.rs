@@ -44,7 +44,15 @@ pub fn App() -> impl IntoView {
                 }
             />
             <div class="fixed bottom-0 right-0 p-4 opacity-50 pointer-events-none">
-                {move || { format!("{chars} characters", chars = text().graphemes(true).count()) }}
+                {move || {
+                    let text = text();
+                    format!(
+                        "{paras}P {words}W {chars}C",
+                        paras = text.lines().count(),
+                        words = text.split_whitespace().count(),
+                        chars = text.graphemes(true).count(),
+                    )
+                }}
             </div>
         </div>
     }
