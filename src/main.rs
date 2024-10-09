@@ -92,6 +92,7 @@ pub fn App() -> impl IntoView {
             <textarea
                 class="p-8 px-24 text-base bg-transparent outline-none resize-none size-full selection:bg-darkbrown"
                 prop:value=text
+                autocorrect="off"
                 on:input=move |event| {
                     text.set(event_target_value(&event));
                 }
@@ -137,8 +138,13 @@ fn StatusBar() -> impl IntoView {
             }
         });
     });
+
+    window_event_listener(leptos::ev::contextmenu, move |event| {
+        event.prevent_default();
+    });
+
     view! {
-        <div class="fixed inset-x-0 bottom-0 p-4 text-right select-none text-fade">
+        <div class="fixed inset-x-0 bottom-0 p-4 text-base text-right select-none text-fade">
             <Horizontal class="justify-between">
                 {move || {
                     PathBuf::from_str(&read_save_path())
@@ -147,13 +153,13 @@ fn StatusBar() -> impl IntoView {
                 }}
                 <Horizontal gap=2>
                     {[
-                        (vec!["c", "s"], "Save", Callback::new(move |()| save.dispatch(false))),
+                        (vec!["c", "S"], "Save", Callback::new(move |()| save.dispatch(false))),
                         (
-                            vec!["c", "shift", "s"],
+                            vec!["c", "shift", "S"],
                             "Save as",
                             Callback::new(move |()| save.dispatch(true)),
                         ),
-                        (vec!["c", "q"], "Quit", Callback::new(move |()| {})),
+                        (vec!["c", "Q"], "Quit", Callback::new(move |()| {})),
                     ]
                         .into_iter()
                         .map(|(keys, name, action)| {
@@ -167,7 +173,11 @@ fn StatusBar() -> impl IntoView {
                             }
                         })
                         .collect_view()}
-                </Horizontal> <div class="relative *:transition group">
+                </Horizontal>
+                <div
+                    class="relative *:transition group transition"
+                    class=("opacity-0", move || text().is_empty())
+                >
                     <div class="absolute bottom-0 right-0 truncate group-hover:opacity-0">
                         {move || {
                             let text = text();
