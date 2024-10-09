@@ -2,6 +2,7 @@
 use console_error_panic_hook::set_once;
 use leptos::{component, create_rw_signal, event_target_value, IntoView, SignalSet};
 use leptos::{logging::log, mount_to_body, view};
+use unicode_segmentation::UnicodeSegmentation;
 
 macro_rules! dbg {
     () => {
@@ -43,7 +44,7 @@ pub fn App() -> impl IntoView {
                 }
             />
             <div class="fixed bottom-0 right-0 p-4 opacity-50 pointer-events-none">
-                {move || format!("{bytes} bytes", bytes = text().len())}
+                {move || { format!("{chars} characters", chars = text().graphemes(true).count()) }}
             </div>
         </div>
     }
