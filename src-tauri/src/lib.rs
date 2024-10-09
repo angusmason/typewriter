@@ -1,4 +1,8 @@
-use std::{fs::write, path, sync::Mutex};
+use std::{
+    fs::{read_to_string, write},
+    path,
+    sync::Mutex,
+};
 
 use rfd::FileDialog;
 use tauri::{command, generate_context, generate_handler, AppHandle, Builder, Manager, State};
@@ -25,7 +29,7 @@ fn load_file(path: Option<String>) -> Option<String> {
         Some(path) => path,
         None => FileDialog::new().pick_file()?.to_str().unwrap().to_string(),
     };
-    let data = std::fs::read_to_string(&path).unwrap();
+    let data = read_to_string(&path).unwrap();
     Some(data)
 }
 
