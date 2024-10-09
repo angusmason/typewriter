@@ -86,18 +86,23 @@ pub fn App() -> impl IntoView {
             save.dispatch(event.shift_key());
         }
     });
+
+    window_event_listener(leptos::ev::contextmenu, move |event| {
+        event.prevent_default();
+    });
+
     view! {
         <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
             <div data-tauri-drag-region class="w-full h-8" />
             <textarea
-                class="p-8 px-24 text-base outline-none resize-none size-full bg-transparent selection:bg-darkbrown"
+                class="p-8 px-24 text-base outline-none resize-none size-full bg-brown selection:bg-darkbrown"
                 autocorrect="off"
                 prop:value=text
                 on:input=move |event| {
                     text.set(event_target_value(&event));
                 }
             />
-            <div class="fixed inset-x-0 bottom-0 p-4 text-right select-none text-fade cursor-default select-none">
+            <div class="text-base fixed inset-x-0 bottom-0 p-4 text-right select-none text-fade cursor-default select-none">
                 <Horizontal class="justify-between">
                     <Horizontal gap=2>
                         {[
@@ -120,18 +125,14 @@ pub fn App() -> impl IntoView {
                             let lines = text.lines().count();
                             let words = text.split_whitespace().count();
                             let chars = text.graphemes(true).count();
-                            
                             if lines > 0 || words > 0 || chars > 0 {
                                 view! {
-                                        <div class="absolute bottom-0 right-0 truncate">
-                                            {format!("{lines}L {words}W {chars}C")}
-                                        </div>
+                                    <div class="absolute bottom-0 right-0 truncate">
+                                        {format!("{lines}L {words}W {chars}C")}
+                                    </div>
                                 }
-                            }
-                            else {
-                                view!{
-                                    <div></div>
-                                }
+                            } else {
+                                view! { <div></div> }
                             }
                         }}
                     </div>
