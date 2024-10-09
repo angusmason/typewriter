@@ -6,3 +6,19 @@
     font-family: "Mono";
     src: url('/fonts/mono.ttf');
 }
+
+@layer base {
+    html, body {
+        @apply overflow-hidden;
+        overscroll-behavior: contain;
+    }
+}
+
+::-webkit-scrollbar {
+    display: none;
+}
+
+body {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
