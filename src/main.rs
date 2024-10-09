@@ -144,7 +144,7 @@ pub fn App() -> impl IntoView {
 
     view! {
         <div class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
-            <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-8" />
+            <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-12" />
             <textarea
                 class="p-8 px-24 text-base bg-transparent outline-none resize-none size-full selection:bg-darkbrown"
                 prop:value=text
@@ -160,9 +160,9 @@ pub fn App() -> impl IntoView {
 
 #[component]
 fn StatusBar() -> impl IntoView {
-    let Context { save_path: (read_save_path, _), save, .. } = use_context().unwrap();
+    let Context { save_path: (read_save_path, _), save, text } = use_context().unwrap();
     view! {
-        <div class="fixed inset-x-0 bottom-0 p-4 text-base text-right select-none text-fade">
+        <div class="fixed inset-x-0 bottom-0 p-4 text-base text-right select-none bg-brown text-fade">
             <Horizontal class="justify-between">
                 {move || {
                     PathBuf::from_str(&read_save_path())
@@ -195,18 +195,7 @@ fn StatusBar() -> impl IntoView {
                             }
                         })
                         .collect_view()}
-                </Horizontal> <Counter />
-            </Horizontal>
-        </div>
-    }
-}
-
-#[component]
-fn Counter() -> impl IntoView {
-    let Context { text, .. } = use_context().unwrap();
-    view! {
-        <div class="relative *:transition group" class=("opacity-0", move || text().is_empty())>
-            <div class="absolute bottom-0 right-0 truncate group-hover:opacity-0">
+                </Horizontal>
                 {move || {
                     let text = text();
                     format!(
@@ -216,21 +205,11 @@ fn Counter() -> impl IntoView {
                         chars = text.graphemes(true).count(),
                     )
                 }}
-            </div>
-            <div class="truncate opacity-0 group-hover:opacity-100">
-                {move || {
-                    let text = text();
-                    format!(
-                        "{lines} lines, {words} words, {chars} characters",
-                        lines = text.lines().count(),
-                        words = text.split_whitespace().count(),
-                        chars = text.graphemes(true).count(),
-                    )
-                }}
-            </div>
+            </Horizontal>
         </div>
     }
 }
+
 
 #[component]
 #[allow(clippy::cast_precision_loss)]
