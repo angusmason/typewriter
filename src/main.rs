@@ -92,7 +92,7 @@ pub fn App() -> impl IntoView {
     provide_context(text);
     view! {
         <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
-            <div data-tauri-drag-region class="w-full h-8" />
+            <div data-tauri-drag-region class="w-full h-12" />
             <textarea
                 class="p-8 px-24 text-base bg-transparent outline-none resize-none size-full selection:bg-darkbrown"
                 prop:value=text
@@ -149,7 +149,7 @@ fn StatusBar() -> impl IntoView {
     });
 
     view! {
-        <div class="fixed inset-x-0 bottom-0 p-4 text-base text-right select-none text-fade">
+        <div class="bg-brown fixed inset-x-0 bottom-0 p-4 text-base text-right select-none text-fade">
             <Horizontal class="justify-between">
                 {move || {
                     PathBuf::from_str(&read_save_path())
