@@ -80,6 +80,10 @@ impl Inter {
         }
         Self::call("load_file", &LoadFileArgs { path }).await
     }
+
+    async fn quit() {
+        invoke_without_args("quit").await;
+    }
 }
 
 #[component]
@@ -159,7 +163,11 @@ fn StatusBar() -> impl IntoView {
                             "Save as",
                             Callback::new(move |()| save.dispatch(true)),
                         ),
-                        (vec!["c", "Q"], "Quit", Callback::new(move |()| {})),
+                        (
+                            vec!["c", "Q"],
+                            "Quit",
+                            Callback::new(move |()| spawn_local(Inter::quit())),
+                        ),
                     ]
                         .into_iter()
                         .map(|(keys, name, action)| {
@@ -173,35 +181,42 @@ fn StatusBar() -> impl IntoView {
                             }
                         })
                         .collect_view()}
-                </Horizontal>
-                <div
-                    class="relative *:transition group transition"
-                    class=("opacity-0", move || text().is_empty())
-                >
-                    <div class="absolute bottom-0 right-0 truncate group-hover:opacity-0">
-                        {move || {
-                            let text = text();
-                            format!(
-                                "{lines}L {words}W {chars}C",
-                                lines = text.lines().count(),
-                                words = text.split_whitespace().count(),
-                                chars = text.graphemes(true).count(),
-                            )
-                        }}
-                    </div>
-                    <div class="truncate opacity-0 group-hover:opacity-100">
-                        {move || {
-                            let text = text();
-                            format!(
-                                "{lines} lines, {words} words, {chars} characters",
-                                lines = text.lines().count(),
-                                words = text.split_whitespace().count(),
-                                chars = text.graphemes(true).count(),
-                            )
-                        }}
-                    </div>
-                </div>
+                </Horizontal> <Counter />
             </Horizontal>
+        </div>
+    }
+}
+
+#[component]
+fn Counter() -> impl IntoView {
+    let text: RwSignal<String> = use_context().unwrap();
+    view! {
+        <div
+            class="relative *:transition group transition"
+            class=("opacity-0", move || text().is_empty())
+        >
+            <div class="absolute bottom-0 right-0 truncate group-hover:opacity-0">
+                {move || {
+                    let text = text();
+                    format!(
+                        "{lines}L {words}W {chars}C",
+                        lines = text.lines().count(),
+                        words = text.split_whitespace().count(),
+                        chars = text.graphemes(true).count(),
+                    )
+                }}
+            </div>
+            <div class="truncate opacity-0 group-hover:opacity-100">
+                {move || {
+                    let text = text();
+                    format!(
+                        "{lines} lines, {words} words, {chars} characters",
+                        lines = text.lines().count(),
+                        words = text.split_whitespace().count(),
+                        chars = text.graphemes(true).count(),
+                    )
+                }}
+            </div>
         </div>
     }
 }
