@@ -101,8 +101,8 @@ pub fn App() -> impl IntoView {
                             {move || {
                                 let text = text();
                                 format!(
-                                    "{paras}P {words}W {chars}C",
-                                    paras = text.lines().count(),
+                                    "{lines}L {words}W {chars}C",
+                                    lines = text.lines().count(),
                                     words = text.split_whitespace().count(),
                                     chars = text.graphemes(true).count(),
                                 )
@@ -112,8 +112,8 @@ pub fn App() -> impl IntoView {
                             {move || {
                                 let text = text();
                                 format!(
-                                    "{paras} paragraphs, {words} words, {chars} characters",
-                                    paras = text.lines().count(),
+                                    "{lines} lines, {words} words, {chars} characters",
+                                    lines = text.lines().count(),
                                     words = text.split_whitespace().count(),
                                     chars = text.graphemes(true).count(),
                                 )
