@@ -10,9 +10,7 @@ use serde::Serialize;
 use console_error_panic_hook::set_once;
 use leptos::ev::keydown;
 use leptos::{
-    component, create_action, create_effect, create_rw_signal, event_target_value, provide_context,
-    spawn_local, use_context, window_event_listener, Action, AttributeValue, Callback, Children,
-    CollectView, IntoView, RwSignal, Signal, SignalGetUntracked, SignalSet, WriteSignal,
+    component, create_action, create_effect, create_rw_signal, event_target_value, provide_context, spawn_local, use_context, window_event_listener, Action, AttributeValue, Callback, Children, CollectView, IntoView, RwSignal, Show, Signal, SignalGetUntracked, SignalSet, WriteSignal
 };
 use leptos::{mount_to_body, view};
 use leptos_use::storage::use_local_storage;
@@ -143,10 +141,10 @@ pub fn App() -> impl IntoView {
     }
 
     view! {
-        <div class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
+        <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
             <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-12" />
             <textarea
-                class="p-8 px-24 text-base bg-transparent outline-none resize-none size-full selection:bg-darkbrown"
+                class="p-8 px-24 text-base bg-transparent outline-none resize-none grow selection:bg-darkbrown"
                 prop:value=text
                 autocorrect="off"
                 on:input=move |event| {
@@ -154,7 +152,7 @@ pub fn App() -> impl IntoView {
                 }
             />
             <StatusBar />
-        </div>
+        </Vertical>
     }
 }
 
@@ -162,7 +160,7 @@ pub fn App() -> impl IntoView {
 fn StatusBar() -> impl IntoView {
     let Context { save_path: (read_save_path, _), save, text } = use_context().unwrap();
     view! {
-        <div class="fixed inset-x-0 bottom-0 p-4 text-base text-right select-none bg-brown text-fade">
+        <div class="inset-x-0 bottom-0 p-4 text-base text-right select-none text-fade">
             <Horizontal class="justify-between">
                 {move || {
                     PathBuf::from_str(&read_save_path())
@@ -196,15 +194,19 @@ fn StatusBar() -> impl IntoView {
                         })
                         .collect_view()}
                 </Horizontal>
-                {move || {
-                    let text = text();
-                    format!(
-                        "{lines}L {words}W {chars}C",
-                        lines = text.lines().count(),
-                        words = text.split_whitespace().count(),
-                        chars = text.graphemes(true).count(),
-                    )
-                }}
+                <Show when=move || {
+                    !text().is_empty()
+                }>
+                    {move || {
+                        let text = text();
+                        format!(
+                            "{lines}L {words}W {chars}C",
+                            lines = text.lines().count(),
+                            words = text.split_whitespace().count(),
+                            chars = text.graphemes(true).count(),
+                        )
+                    }}
+                </Show>
             </Horizontal>
         </div>
     }
