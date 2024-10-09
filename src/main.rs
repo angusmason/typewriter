@@ -90,20 +90,20 @@ pub fn App() -> impl IntoView {
         <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
             <div data-tauri-drag-region class="w-full h-8" />
             <textarea
-                class="p-8 px-24 text-base bg-transparent outline-none resize-none size-full selection:bg-darkbrown"
+                class="p-8 px-24 text-base outline-none resize-none size-full bg-transparent selection:bg-darkbrown"
                 autocorrect="off"
                 prop:value=text
                 on:input=move |event| {
                     text.set(event_target_value(&event));
                 }
             />
-            <div class="fixed inset-x-0 bottom-0 p-4 text-right select-none text-fade">
+            <div class="fixed inset-x-0 bottom-0 p-4 text-right select-none text-fade cursor-default select-none">
                 <Horizontal class="justify-between">
                     <Horizontal gap=2>
                         {[
-                            (vec!["c", "s"], "Save"),
-                            (vec!["c", "shift", "s"], "Save as"),
-                            (vec!["c", "q"], "Quit"),
+                            (vec!["c", "S"], "Save"),
+                            (vec!["c", "shift", "S"], "Save as"),
+                            (vec!["c", "Q"], "Quit"),
                         ]
                             .into_iter()
                             .map(|(keys, action)| {
@@ -115,28 +115,25 @@ pub fn App() -> impl IntoView {
                             .collect_view()}
                     </Horizontal>
                     <div class="relative *:transition group">
-                        <div class="absolute bottom-0 right-0 truncate group-hover:opacity-0">
-                            {move || {
-                                let text = text();
-                                format!(
-                                    "{lines}L {words}W {chars}C",
-                                    lines = text.lines().count(),
-                                    words = text.split_whitespace().count(),
-                                    chars = text.graphemes(true).count(),
-                                )
-                            }}
-                        </div>
-                        <div class="absolute bottom-0 right-0 truncate opacity-0 group-hover:opacity-100">
-                            {move || {
-                                let text = text();
-                                format!(
-                                    "{lines} lines, {words} words, {chars} characters",
-                                    lines = text.lines().count(),
-                                    words = text.split_whitespace().count(),
-                                    chars = text.graphemes(true).count(),
-                                )
-                            }}
-                        </div>
+                        {move || {
+                            let text = text();
+                            let lines = text.lines().count();
+                            let words = text.split_whitespace().count();
+                            let chars = text.graphemes(true).count();
+                            
+                            if lines > 0 || words > 0 || chars > 0 {
+                                view! {
+                                        <div class="absolute bottom-0 right-0 truncate">
+                                            {format!("{lines}L {words}W {chars}C")}
+                                        </div>
+                                }
+                            }
+                            else {
+                                view!{
+                                    <div></div>
+                                }
+                            }
+                        }}
                     </div>
                 </Horizontal>
             </div>
