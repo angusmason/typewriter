@@ -144,7 +144,7 @@ pub fn App() -> impl IntoView {
         <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
             <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-12" />
             <textarea
-                class="p-8 px-24 text-base bg-transparent outline-none resize-none grow selection:bg-darkbrown"
+                class="p-12 pb-48 pt-18 px-24 text-sm bg-transparent outline-none resize-none grow selection:bg-darkbrown"
                 prop:value=text
                 autocorrect="off"
                 on:input=move |event| {
@@ -169,7 +169,7 @@ fn StatusBar() -> impl IntoView {
             command_pressed.set(false);
     });
     view! {
-        <div class="inset-x-0 bottom-0 p-4 text-base text-right select-none text-fade">
+        <div class="px-24 inset-x-0 bottom-0 p-5 pt-7 text-xs text-right select-none text-fade">
             <Horizontal class="justify-between">
                 <div class="h-6">
                     <div class="absolute transition" class=("opacity-0", command_pressed)>
@@ -191,7 +191,7 @@ fn StatusBar() -> impl IntoView {
                                     Callback::new(move |()| save.dispatch(false)),
                                 ),
                                 (
-                                    vec!["c", "shift", "S"],
+                                    vec!["c", "sh", "S"],
                                     "Save as",
                                     Callback::new(move |()| save.dispatch(true)),
                                 ),
@@ -204,12 +204,10 @@ fn StatusBar() -> impl IntoView {
                                 .into_iter()
                                 .map(|(keys, name, action)| {
                                     view! {
-                                        <button on:click=move |_| action(())>
-                                            <Horizontal gap=2 class="transition hover:brightness-150">
-                                                <div>{keys.join("-")}</div>
-                                                <div class="text-red">{name}</div>
-                                            </Horizontal>
-                                        </button>
+                                        <Horizontal gap=2>
+                                            <div>{keys.join("-")}</div>
+                                            <div class="text-red">{name}</div>
+                                        </Horizontal>
                                     }
                                 })
                                 .collect_view()}
