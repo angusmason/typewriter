@@ -7,7 +7,7 @@ use console_error_panic_hook::set_once;
 use leptos::ev::keydown;
 use leptos::{
     component, create_rw_signal, event_target_value, spawn_local, window_event_listener,
-    AttributeValue, Children, CollectView, IntoView, SignalGetUntracked, SignalSet,
+    AttributeValue, Children, IntoView, SignalGetUntracked, SignalSet,
 };
 use leptos::{mount_to_body, view};
 use serde_wasm_bindgen::to_value;
