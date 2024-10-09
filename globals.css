@@ -6,8 +6,3 @@
     font-family: "Mono", monospace;
     src: url('./fonts/mono.ttf') format('truetype');
 }
-
-html, body {
-    height: 100%;
-    margin: 0;
-}
