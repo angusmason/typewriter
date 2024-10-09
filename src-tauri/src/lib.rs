@@ -1,16 +1,22 @@
-use std::fs::write;
+use std::{fs::write, path};
 
 use rfd::FileDialog;
 use tauri::{command, generate_context, generate_handler, Builder, Manager};
 use tauri_plugin_decorum::WebviewWindowExt;
 
 #[command]
-fn save_file(data: String) {
-    let path = FileDialog::new()
-        .set_can_create_directories(true)
-        .save_file()
-        .unwrap();
-    write(path, data).unwrap();
+fn save_file(data: String, path: Option<String>) -> Option<String> {
+    let path = match path {
+        Some(path) => path,
+        None => FileDialog::new()
+            .set_can_create_directories(true)
+            .save_file()?
+            .to_str()
+            .unwrap()
+            .to_string(),
+    };
+    write(&path, data).unwrap();
+    Some(path)
 }
 
 #[cfg_attr(mobile, mobile_entry_point)]

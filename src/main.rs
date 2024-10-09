@@ -1,15 +1,16 @@
 #![warn(clippy::pedantic, clippy::nursery)]
 #![allow(clippy::must_use_candidate)]
-use std::collections::HashMap;
-use std::iter::once;
+use codee::string::FromToStringCodec;
+use serde::Serialize;
 
 use console_error_panic_hook::set_once;
 use leptos::ev::keydown;
 use leptos::{
-    component, create_rw_signal, event_target_value, spawn_local, window_event_listener,
+    component, create_action, create_rw_signal, event_target_value, window_event_listener,
     AttributeValue, Children, CollectView, IntoView, SignalGetUntracked, SignalSet,
 };
 use leptos::{mount_to_body, view};
+use leptos_use::storage::use_local_storage;
 use serde_wasm_bindgen::to_value;
 use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::prelude::wasm_bindgen;
@@ -50,26 +51,40 @@ extern "C" {
     async fn invoke(cmd: &str, args: JsValue) -> JsValue;
 }
 
-fn save(data: String) {
-    spawn_local(async move {
-        invoke(
-            "save_file",
-            to_value(&once(("data", data)).collect::<HashMap<_, _>>()).unwrap(),
-        )
-        .await;
-    });
-}
-
 #[component]
 pub fn App() -> impl IntoView {
     let text = create_rw_signal(String::new());
-    window_event_listener(keydown, move |event| {
-        if !event.meta_key() || event.key() != "s" {
-            return;
+    let (read_save_path, write_save_path, _) =
+        use_local_storage::<String, FromToStringCodec>("save_path");
+    let save = create_action(move |save_as| {
+        let save_as: bool = *save_as;
+        async move {
+            #[derive(Serialize)]
+            struct SaveFileArgs {
+                data: String,
+                path: Option<String>,
+            }
+            write_save_path(
+                invoke(
+                    "save_file",
+                    to_value(&SaveFileArgs {
+                        data: text.get_untracked(),
+                        path: Some(read_save_path.get_untracked())
+                            .filter(|path| !save_as && !path.is_empty()),
+                    })
+                    .unwrap(),
+                )
+                .await
+                .as_string()
+                .unwrap(),
+            );
         }
-        event.prevent_default();
-        let text = text.get_untracked();
-        save(text);
+    });
+    window_event_listener(keydown, move |event| {
+        if event.meta_key() && event.key() == "s" {
+            event.prevent_default();
+            save.dispatch(event.shift_key());
+        }
     });
     view! {
         <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
@@ -84,13 +99,19 @@ pub fn App() -> impl IntoView {
             <div class="fixed inset-x-0 bottom-0 p-4 text-right opacity-50 select-none">
                 <Horizontal class="justify-between">
                     <div class="grid grid-cols-[auto_auto] gap-1 gap-x-2">
-                        {[(vec!["cmd", "s"], "save"), (vec!["cmd", "q"], "quit")]
+                        {[
+                            (vec!["cmd", "s"], "save"),
+                            (vec!["cmd", "shift", "s"], "save as"),
+                            (vec!["cmd", "q"], "quit"),
+                        ]
                             .into_iter()
                             .map(|(keys, action)| {
                                 view! {
-                                    <div class="px-1 text-sm border border-white rounded">
-                                        {keys.join(" ")}
-                                    </div>
+                                    <Horizontal>
+                                        <div class="px-1 text-sm border border-white rounded">
+                                            {keys.join(" ")}
+                                        </div>
+                                    </Horizontal>
                                     <div class="">{action}</div>
                                 }
                             })
