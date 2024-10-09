@@ -8,7 +8,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use console_error_panic_hook::set_once;
-use leptos::ev::keydown;
+use leptos::ev::{keydown, keyup};
 use leptos::{
     component, create_action, create_effect, create_rw_signal, event_target_value, provide_context, spawn_local, use_context, window_event_listener, Action, AttributeValue, Callback, Children, CollectView, IntoView, RwSignal, Show, Signal, SignalGetUntracked, SignalSet, WriteSignal
 };
@@ -159,44 +159,64 @@ pub fn App() -> impl IntoView {
 #[component]
 fn StatusBar() -> impl IntoView {
     let Context { save_path: (read_save_path, _), save, text } = use_context().unwrap();
+    let command_pressed = RwSignal::new(false);
+    window_event_listener(keydown, move |event| {
+        if event.meta_key() {
+            command_pressed.set(true);
+        }
+    });
+    window_event_listener(keyup, move |event| {
+            command_pressed.set(false);
+    });
     view! {
         <div class="inset-x-0 bottom-0 p-4 text-base text-right select-none text-fade">
             <Horizontal class="justify-between">
-                {move || {
-                    PathBuf::from_str(&read_save_path())
-                        .ok()
-                        .map(|path| { path.to_string_lossy().to_string() })
-                }}
-                <Horizontal gap=2>
-                    {[
-                        (vec!["c", "S"], "Save", Callback::new(move |()| save.dispatch(false))),
-                        (
-                            vec!["c", "shift", "S"],
-                            "Save as",
-                            Callback::new(move |()| save.dispatch(true)),
-                        ),
-                        (
-                            vec!["c", "Q"],
-                            "Quit",
-                            Callback::new(move |()| spawn_local(Inter::quit())),
-                        ),
-                    ]
-                        .into_iter()
-                        .map(|(keys, name, action)| {
-                            view! {
-                                <button on:click=move |_| action(())>
-                                    <Horizontal gap=2 class="transition hover:brightness-150">
-                                        <div>{keys.join("-")}</div>
-                                        <div class="text-red">{name}</div>
-                                    </Horizontal>
-                                </button>
-                            }
-                        })
-                        .collect_view()}
-                </Horizontal>
-                <Show when=move || {
-                    !text().is_empty()
-                }>
+                <div class="h-6">
+                    <div class="absolute transition" class=("opacity-0", command_pressed)>
+                        {move || {
+                            PathBuf::from_str(&read_save_path())
+                                .ok()
+                                .map(|path| { path.to_string_lossy().to_string() })
+                        }}
+                    </div>
+                    <div
+                        class="absolute transition"
+                        class=("opacity-0", move || !command_pressed())
+                    >
+                        <Horizontal gap=2>
+                            {[
+                                (
+                                    vec!["c", "S"],
+                                    "Save",
+                                    Callback::new(move |()| save.dispatch(false)),
+                                ),
+                                (
+                                    vec!["c", "shift", "S"],
+                                    "Save as",
+                                    Callback::new(move |()| save.dispatch(true)),
+                                ),
+                                (
+                                    vec!["c", "Q"],
+                                    "Quit",
+                                    Callback::new(move |()| spawn_local(Inter::quit())),
+                                ),
+                            ]
+                                .into_iter()
+                                .map(|(keys, name, action)| {
+                                    view! {
+                                        <button on:click=move |_| action(())>
+                                            <Horizontal gap=2 class="transition hover:brightness-150">
+                                                <div>{keys.join("-")}</div>
+                                                <div class="text-red">{name}</div>
+                                            </Horizontal>
+                                        </button>
+                                    }
+                                })
+                                .collect_view()}
+                        </Horizontal>
+                    </div>
+                </div>
+                <Show when=move || { !text().is_empty() } fallback=|| view! { <div /> }>
                     {move || {
                         let text = text();
                         format!(
