@@ -5,7 +5,7 @@
   "rust-analyzer.rustfmt.overrideCommand": [
     "leptosfmt",
     "--stdin",
-    "--rustfmt"
+    "--rustfmt",
   ],
   "rust-analyzer.check.overrideCommand": [
     "cargo",

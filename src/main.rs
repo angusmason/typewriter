@@ -1,12 +1,19 @@
 #![warn(clippy::pedantic, clippy::nursery)]
 #![allow(clippy::must_use_candidate)]
+use std::collections::HashMap;
+use std::iter::once;
+
 use console_error_panic_hook::set_once;
+use leptos::ev::keydown;
 use leptos::{
-    component, create_rw_signal, event_target_value, AttributeValue, Children, CollectView,
-    IntoView, SignalSet,
+    component, create_rw_signal, event_target_value, spawn_local, window_event_listener,
+    AttributeValue, Children, CollectView, IntoView, SignalGetUntracked, SignalSet,
 };
 use leptos::{mount_to_body, view};
+use serde_wasm_bindgen::to_value;
 use unicode_segmentation::UnicodeSegmentation;
+use wasm_bindgen::prelude::wasm_bindgen;
+use wasm_bindgen::JsValue;
 
 #[allow(unused_macros)]
 macro_rules! dbg {
@@ -34,10 +41,36 @@ fn main() {
     });
 }
 
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke)]
+    async fn invoke_without_args(cmd: &str) -> JsValue;
+
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"])]
+    async fn invoke(cmd: &str, args: JsValue) -> JsValue;
+}
+
+fn save(data: String) {
+    spawn_local(async move {
+        invoke(
+            "save_file",
+            to_value(&once(("data", data)).collect::<HashMap<_, _>>()).unwrap(),
+        )
+        .await;
+    });
+}
+
 #[component]
 pub fn App() -> impl IntoView {
     let text = create_rw_signal(String::new());
-    
+    window_event_listener(keydown, move |event| {
+        if !event.meta_key() || event.key() != "s" {
+            return;
+        }
+        event.prevent_default();
+        let text = text.get_untracked();
+        save(text);
+    });
     view! {
         <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
             <div data-tauri-drag-region class="w-full h-8 cursor-grab" />
@@ -48,14 +81,16 @@ pub fn App() -> impl IntoView {
                     text.set(event_target_value(&event));
                 }
             />
-            <div class="fixed inset-x-0 bottom-0 p-4 text-right opacity-50">
+            <div class="fixed inset-x-0 bottom-0 p-4 text-right opacity-50 select-none">
                 <Horizontal class="justify-between">
                     <div class="grid grid-cols-[auto_auto] gap-1 gap-x-2">
                         {[(vec!["cmd", "s"], "save"), (vec!["cmd", "q"], "quit")]
                             .into_iter()
                             .map(|(keys, action)| {
                                 view! {
-                                    <div class="px-1 text-sm border border-white rounded">{keys.join(" ")}</div>
+                                    <div class="px-1 text-sm border border-white rounded">
+                                        {keys.join(" ")}
+                                    </div>
                                     <div class="">{action}</div>
                                 }
                             })
