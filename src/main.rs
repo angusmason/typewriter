@@ -11,8 +11,8 @@ use console_error_panic_hook::set_once;
 use leptos::ev::keydown;
 use leptos::{
     component, create_action, create_effect, create_rw_signal, event_target_value, provide_context,
-    spawn_local, use_context, window_event_listener, AttributeValue, Callback, Children,
-    CollectView, IntoView, RwSignal, SignalGetUntracked, SignalSet,
+    spawn_local, use_context, window_event_listener, Action, AttributeValue, Callback, Children,
+    CollectView, IntoView, RwSignal, Signal, SignalGetUntracked, SignalSet, WriteSignal,
 };
 use leptos::{mount_to_body, view};
 use leptos_use::storage::use_local_storage;
@@ -86,29 +86,16 @@ impl Inter {
     }
 }
 
-#[component]
-pub fn App() -> impl IntoView {
-    let text = create_rw_signal(String::new());
-    provide_context(text);
-    view! {
-        <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
-            <div data-tauri-drag-region class="w-full h-8" />
-            <textarea
-                class="p-8 px-24 text-base bg-transparent outline-none resize-none size-full selection:bg-darkbrown"
-                prop:value=text
-                autocorrect="off"
-                on:input=move |event| {
-                    text.set(event_target_value(&event));
-                }
-            />
-            <StatusBar />
-        </Vertical>
-    }
+#[derive(Clone)]
+struct Context {
+    text: RwSignal<String>,
+    save_path: (Signal<String>, WriteSignal<String>),
+    save: Action<bool, ()>,
 }
 
 #[component]
-fn StatusBar() -> impl IntoView {
-    let text: RwSignal<String> = use_context().unwrap();
+pub fn App() -> impl IntoView {
+    let text = create_rw_signal(String::new());
     let (read_save_path, write_save_path, _) =
         use_local_storage::<String, FromToStringCodec>("save_path");
     let save = create_action(move |save_as| {
@@ -124,6 +111,11 @@ fn StatusBar() -> impl IntoView {
             };
             write_save_path(path);
         }
+    });
+    provide_context(Context {
+        text,
+        save_path: (read_save_path, write_save_path),
+        save,
     });
     window_event_listener(keydown, move |event| {
         if event.meta_key() && event.key() == "s" {
@@ -142,11 +134,33 @@ fn StatusBar() -> impl IntoView {
             }
         });
     });
+    #[cfg(not(debug_assertions))]
+    {
+        use leptos::ev::contextmenu;
+        window_event_listener(contextmenu, move |event| {
+            event.prevent_default();
+        });
+    }
 
-    window_event_listener(leptos::ev::contextmenu, move |event| {
-        event.prevent_default();
-    });
+    view! {
+        <div class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
+            <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-8" />
+            <textarea
+                class="p-8 px-24 text-base bg-transparent outline-none resize-none size-full selection:bg-darkbrown"
+                prop:value=text
+                autocorrect="off"
+                on:input=move |event| {
+                    text.set(event_target_value(&event));
+                }
+            />
+            <StatusBar />
+        </div>
+    }
+}
 
+#[component]
+fn StatusBar() -> impl IntoView {
+    let Context { save_path: (read_save_path, _), save, .. } = use_context().unwrap();
     view! {
         <div class="fixed inset-x-0 bottom-0 p-4 text-base text-right select-none text-fade">
             <Horizontal class="justify-between">
@@ -191,10 +205,7 @@ fn StatusBar() -> impl IntoView {
 fn Counter() -> impl IntoView {
     let text: RwSignal<String> = use_context().unwrap();
     view! {
-        <div
-            class="relative *:transition group transition"
-            class=("opacity-0", move || text().is_empty())
-        >
+        <div class="relative *:transition group" class=("opacity-0", move || text().is_empty())>
             <div class="absolute bottom-0 right-0 truncate group-hover:opacity-0">
                 {move || {
                     let text = text();
