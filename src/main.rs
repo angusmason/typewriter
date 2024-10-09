@@ -87,36 +87,33 @@ pub fn App() -> impl IntoView {
         }
     });
     view! {
-        <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
-            <div data-tauri-drag-region class="w-full h-8 cursor-grab" />
+        <Vertical class="h-full font-sans text-white bg-brown caret-white">
+            <div data-tauri-drag-region class="w-full h-8" />
             <textarea
-                class="p-4 px-16 text-sm bg-transparent outline-none resize-none size-full selection:bg-darkbrown"
+                class="p-8 px-24 font-sans text-base bg-transparent outline-none resize-none size-full selection:bg-darkbrown"
+                autocorrect="off"
                 prop:value=text
                 on:input=move |event| {
                     text.set(event_target_value(&event));
                 }
             />
-            <div class="fixed inset-x-0 bottom-0 p-4 text-right opacity-50 select-none">
+            <div class="fixed inset-x-0 bottom-0 p-4 text-right select-none text-fade">
                 <Horizontal class="justify-between">
-                    <div class="grid grid-cols-[auto_auto] gap-1 gap-x-2">
+                    <Horizontal gap=2>
                         {[
-                            (vec!["cmd", "s"], "save"),
-                            (vec!["cmd", "shift", "s"], "save as"),
-                            (vec!["cmd", "q"], "quit"),
+                            (vec!["c", "s"], "Save"),
+                            (vec!["c", "shift", "s"], "Save as"),
+                            (vec!["c", "q"], "Quit"),
                         ]
                             .into_iter()
                             .map(|(keys, action)| {
                                 view! {
-                                    <Horizontal>
-                                        <div class="px-1 text-sm border border-white rounded">
-                                            {keys.join(" ")}
-                                        </div>
-                                    </Horizontal>
-                                    <div class="">{action}</div>
+                                    {keys.join("-")}
+                                    <div class="text-red">{action}</div>
                                 }
                             })
                             .collect_view()}
-                    </div>
+                    </Horizontal>
                     <div class="relative *:transition group">
                         <div class="absolute bottom-0 right-0 truncate group-hover:opacity-0">
                             {move || {
