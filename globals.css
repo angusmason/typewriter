@@ -6,3 +6,7 @@
     font-family: "Mono";
     src: url('/fonts/mono.ttf');
 }
+
+::-webkit-scrollbar {
+    display: none;
+}
