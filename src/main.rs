@@ -1,7 +1,25 @@
 #![warn(clippy::pedantic, clippy::nursery)]
 use console_error_panic_hook::set_once;
-use leptos::{component, IntoView};
-use leptos::{mount_to_body, view};
+use leptos::{component, create_rw_signal, event_target_value, IntoView, SignalSet};
+use leptos::{logging::log, mount_to_body, view};
+
+macro_rules! dbg {
+    () => {
+        log!("[{}:{}:{}]", file!(), line!(), column!())
+    };
+    ($val:expr $(,)?) => {
+        match $val {
+            tmp => {
+                log!("[{}:{}:{}] {} = {:#?}",
+                    file!(), line!(), column!(), stringify!($val), &tmp);
+                tmp
+            }
+        }
+    };
+    ($($val:expr),+ $(,)?) => {
+        ($(dbg!($val)),+,)
+    };
+}
 
 fn main() {
     set_once();
@@ -13,16 +31,20 @@ fn main() {
 #[component]
 #[must_use]
 pub fn App() -> impl IntoView {
+    let text = create_rw_signal(String::new());
     view! {
-        <div class="flex flex-col h-full bg-brown">
-            <div data-tauri-drag-region class="fixed top-0 z-10 w-full h-8 bg-white cursor-grab" />
-            <main class="flex flex-col justify-start pt-10 grow">
-                <div
-                    class="w-full h-full px-16 pt-4 font-mono text-lg text-white outline-none caret-white"
-                    contenteditable="true"
-                    spellcheck="false"
-                ></div>
-            </main>
+        <div class="flex flex-col h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
+            <div data-tauri-drag-region class="w-full h-8 cursor-grab" />
+            <textarea
+                class="p-4 px-16 text-lg bg-transparent outline-none size-full"
+                prop:value=text
+                on:input=move |event| {
+                    text.set(event_target_value(&event));
+                }
+            />
+            <div class="fixed bottom-0 right-0 p-4 opacity-50 pointer-events-none">
+                {move || format!("{bytes} bytes", bytes = text().len())}
+            </div>
         </div>
     }
 }
