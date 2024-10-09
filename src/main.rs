@@ -1,15 +1,16 @@
 #![warn(clippy::pedantic, clippy::nursery)]
 #![allow(clippy::must_use_candidate)]
-use std::collections::HashMap;
-use std::iter::once;
+use codee::string::FromToStringCodec;
+use serde::Serialize;
 
 use console_error_panic_hook::set_once;
 use leptos::ev::keydown;
 use leptos::{
-    component, create_rw_signal, event_target_value, spawn_local, window_event_listener,
-    AttributeValue, Children, IntoView, SignalGetUntracked, SignalSet,
+    component, create_action, create_rw_signal, event_target_value, window_event_listener,
+    AttributeValue, Children, CollectView, IntoView, SignalGetUntracked, SignalSet,
 };
 use leptos::{mount_to_body, view};
+use leptos_use::storage::use_local_storage;
 use serde_wasm_bindgen::to_value;
 use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::prelude::wasm_bindgen;
@@ -50,43 +51,68 @@ extern "C" {
     async fn invoke(cmd: &str, args: JsValue) -> JsValue;
 }
 
-fn save(data: String) {
-    spawn_local(async move {
-        invoke(
-            "save_file",
-            to_value(&once(("data", data)).collect::<HashMap<_, _>>()).unwrap(),
-        )
-        .await;
-    });
-}
-
 #[component]
 pub fn App() -> impl IntoView {
     let text = create_rw_signal(String::new());
-    window_event_listener(keydown, move |event| {
-        if !event.meta_key() || event.key() != "s" {
-            return;
+    let (read_save_path, write_save_path, _) =
+        use_local_storage::<String, FromToStringCodec>("save_path");
+    let save = create_action(move |save_as| {
+        let save_as: bool = *save_as;
+        async move {
+            #[derive(Serialize)]
+            struct SaveFileArgs {
+                data: String,
+                path: Option<String>,
+            }
+            write_save_path(
+                invoke(
+                    "save_file",
+                    to_value(&SaveFileArgs {
+                        data: text.get_untracked(),
+                        path: Some(read_save_path.get_untracked())
+                            .filter(|path| !save_as && !path.is_empty()),
+                    })
+                    .unwrap(),
+                )
+                .await
+                .as_string()
+                .unwrap(),
+            );
         }
-        event.prevent_default();
-        let text = text.get_untracked();
-        save(text);
+    });
+    window_event_listener(keydown, move |event| {
+        if event.meta_key() && event.key() == "s" {
+            event.prevent_default();
+            save.dispatch(event.shift_key());
+        }
     });
     view! {
-        <Vertical class="font-sans h-full text-white bg-brown caret-white">
+        <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
             <div data-tauri-drag-region class="w-full h-8" />
             <textarea
-                class="font-sans p-8 px-24 text-base bg-transparent outline-none resize-none size-full selection:bg-darkbrown"
-                autocorrect="off"
+                class="p-8 px-24 text-base bg-transparent outline-none resize-none size-full selection:bg-darkbrown"
                 prop:value=text
                 on:input=move |event| {
                     text.set(event_target_value(&event));
                 }
             />
-            <div class="fixed inset-x-0 bottom-0 p-4 text-right text-fade select-none">
+            <div class="fixed inset-x-0 bottom-0 p-4 text-right select-none text-fade">
                 <Horizontal class="justify-between">
-                    <div>
-                        c-S <span class="text-red">Save</span> c-Q <span class="inline text-red">Quit</span>
-                    </div>
+                    <Horizontal gap=2>
+                        {[
+                            (vec!["c", "s"], "Save"),
+                            (vec!["c", "shift", "s"], "Save as"),
+                            (vec!["c", "q"], "Quit"),
+                        ]
+                            .into_iter()
+                            .map(|(keys, action)| {
+                                view! {
+                                    {keys.join("-")}
+                                    <div class="text-red">{action}</div>
+                                }
+                            })
+                            .collect_view()}
+                    </Horizontal>
                     <div class="relative *:transition group">
                         <div class="absolute bottom-0 right-0 truncate group-hover:opacity-0">
                             {move || {

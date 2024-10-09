@@ -13,6 +13,9 @@ serde = { version = "1", features = ["derive"] }
 serde-wasm-bindgen = "0.6"
 console_error_panic_hook = "0.1.7"
 unicode-segmentation = "1.12.0"
+web-sys = { version = "0.3.70", features = ["Storage"] }
+leptos-use = { version = "0.13.5", features = ["storage"] }
+codee = "0.2.0"
 
 [workspace]
 members = ["src-tauri"]
