@@ -72,7 +72,7 @@ pub fn App() -> impl IntoView {
         save(text);
     });
     view! {
-        <Vertical class="font-sans h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
+        <Vertical class="font-sans h-full text-white bg-brown caret-white">
             <div data-tauri-drag-region class="w-full h-8" />
             <textarea
                 class="font-sans p-8 px-24 text-base bg-transparent outline-none resize-none size-full selection:bg-darkbrown"
