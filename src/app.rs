@@ -15,3 +15,4 @@ pub fn App() -> impl IntoView {
         </div>
     }
 }
+
