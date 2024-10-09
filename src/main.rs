@@ -1,13 +1,14 @@
+#![warn(clippy::pedantic, clippy::nursery)]
+
 mod app;
 
-use app::*;
-use leptos::*;
+use app::App;
+use console_error_panic_hook::set_once;
+use leptos::{mount_to_body, view};
 
 fn main() {
-    console_error_panic_hook::set_once();
+    set_once();
     mount_to_body(|| {
-        view! {
-            <App/>
-        }
-    })
+        view! { <App /> }
+    });
 }
