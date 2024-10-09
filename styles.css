@@ -1,8 +1,6 @@
 :root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
+  --font-family: 'custom_mono';
+  line-height: 20px;
 
   background-color: #29272B;
 
@@ -14,6 +12,7 @@
 }
 
 .container {
+  font-family: var(--font-family)
   margin: 0;
   padding-top: 10vh;
   display: flex;
@@ -22,7 +21,8 @@
   text-align: center;
 }
 
-textarea { 
+textarea {
+  font-family: var(--font-family)
   border-style: none;
   border-color: Transparent;
   overflow: auto;
