@@ -81,20 +81,10 @@ pub fn App() -> impl IntoView {
                     text.set(event_target_value(&event));
                 }
             />
-            <div class="fixed inset-x-0 bottom-0 p-4 text-right opacity-50 select-none">
+            <div class="fixed inset-x-0 bottom-0 p-4 text-right text-fade select-none">
                 <Horizontal class="justify-between">
-                    <div class="grid grid-cols-[auto_auto] gap-1 gap-x-2">
-                        {[(vec!["cmd", "s"], "save"), (vec!["cmd", "q"], "quit")]
-                            .into_iter()
-                            .map(|(keys, action)| {
-                                view! {
-                                    <div class="px-1 text-sm border border-white rounded">
-                                        {keys.join(" ")}
-                                    </div>
-                                    <div class="">{action}</div>
-                                }
-                            })
-                            .collect_view()}
+                    <div>
+                        c-S <span class="text-red">Save</span> c-Q <span class="inline text-red">Quit</span>
                     </div>
                     <div class="relative *:transition group">
                         <div class="absolute bottom-0 right-0 truncate group-hover:opacity-0">
