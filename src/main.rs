@@ -185,7 +185,7 @@ fn StatusBar() -> impl IntoView {
         command_pressed.set(false);
     });
     view! {
-        <div class="cursor-pointer px-24 inset-x-0 bottom-0 p-5 pt-7 text-xs text-right select-none text-fade">
+        <div class="cursor-default px-24 inset-x-0 bottom-0 p-5 pt-7 text-xs text-right select-none text-fade">
             <Horizontal class="justify-between">
                 <div class="h-6">
                     <div class="absolute transition" class=("opacity-0", command_pressed)>
