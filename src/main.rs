@@ -289,7 +289,7 @@ fn StatusBar() -> impl IntoView {
                                         <button on:click=move |_| action(())>
                                             <Horizontal gap=2 class="transition hover:brightness-150">
                                                 <div>
-                                                    {format!("c-{}{char}", if shift { "shift-" } else { "" })}
+                                                    {format!("c-{}{char}", if shift { "sh-" } else { "" })}
                                                 </div>
                                                 <div class="text-red">{name}</div>
                                             </Horizontal>
