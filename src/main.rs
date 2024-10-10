@@ -148,7 +148,7 @@ pub fn App() -> impl IntoView {
         <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
             <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-12" />
             <textarea
-                class="p-12 pb-48 pt-18 px-24 text-sm bg-transparent outline-none resize-none grow selection:bg-darkbrown"
+                class="p-12 pb-48 pt-20 px-24 text-sm bg-transparent outline-none resize-none grow selection:bg-darkbrown"
                 prop:value=text
                 autocorrect="off"
                 on:input=move |event| {
@@ -182,9 +182,7 @@ fn StatusBar() -> impl IntoView {
         }
     });
     window_event_listener(keyup, move |event| {
-        if event.meta_key() {
-            command_pressed.set(false);
-        }
+        command_pressed.set(false);
     });
     view! {
         <div class="px-24 inset-x-0 bottom-0 p-5 pt-7 text-xs text-right select-none text-fade">
@@ -194,9 +192,24 @@ fn StatusBar() -> impl IntoView {
                         {move || {
                             let path = PathBuf::from_str(&read_save_path())
                                 .ok()
-                                .map(|path| { path.to_string_lossy().to_string() });
-                            let is_dirty = text.get() != original_text.get();
-                            path.map_or_else(String::new, |p| format!("{}{}", p, if is_dirty { "*" } else { "" }))
+                                .map(|p| p.to_string_lossy().to_string());
+                            let formatted_path = path
+                                .map_or_else(
+                                    String::new,
+                                    |p| {
+                                        let is_dirty = text.get() != original_text.get();
+                                        let asterisk = if is_dirty {
+                                            "<span class='text-white'>*</span> "
+                                        } else {
+                                            ""
+                                        };
+                                        format!("{asterisk}{p}")
+                                    },
+                                );
+                            view! {
+                                // Check for unsaved changes
+                                <span inner_html=formatted_path />
+                            }
                         }}
                     </div>
                     <div
