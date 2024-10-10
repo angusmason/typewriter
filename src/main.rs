@@ -1,7 +1,7 @@
 #![warn(clippy::pedantic, clippy::nursery)]
 #![allow(clippy::must_use_candidate)]
+
 use std::path::PathBuf;
-use std::str::FromStr;
 
 use codee::string::FromToStringCodec;
 use serde::de::DeserializeOwned;
@@ -10,7 +10,9 @@ use serde::Serialize;
 use console_error_panic_hook::set_once;
 use leptos::ev::{keydown, keyup};
 use leptos::{
-    component, create_action, create_effect, create_rw_signal, event_target_value, provide_context, spawn_local, use_context, window_event_listener, Action, AttributeValue, Callback, Children, CollectView, IntoView, RwSignal, Show, Signal, SignalGet, SignalGetUntracked, SignalSet, WriteSignal
+    component, create_action, create_effect, create_rw_signal, event_target_value, provide_context,
+    spawn_local, use_context, window_event_listener, Action, AttributeValue, Callback, Children,
+    CollectView, IntoView, RwSignal, Show, Signal, SignalGetUntracked, SignalSet, WriteSignal,
 };
 use leptos::{mount_to_body, view};
 use leptos_use::storage::use_local_storage;
@@ -62,19 +64,19 @@ impl Inter {
         from_value(invoke(cmd, to_value(args).unwrap()).await).unwrap()
     }
 
-    async fn save_file(data: String, path: Option<String>) -> Option<String> {
+    async fn save_file(data: String, path: Option<PathBuf>) -> Option<String> {
         #[derive(Serialize)]
         struct SaveFileArgs {
             data: String,
-            path: Option<String>,
+            path: Option<PathBuf>,
         }
         Self::call("save_file", &SaveFileArgs { data, path }).await
     }
 
-    async fn load_file(path: Option<String>) -> Option<String> {
+    async fn load_file(path: Option<PathBuf>) -> (Option<String>, Option<PathBuf>) {
         #[derive(Serialize)]
         struct LoadFileArgs {
-            path: Option<String>,
+            path: Option<PathBuf>,
         }
         Self::call("load_file", &LoadFileArgs { path }).await
     }
@@ -103,7 +105,7 @@ pub fn App() -> impl IntoView {
         async move {
             let Some(path) = Inter::save_file(
                 text.get_untracked(),
-                Some(read_save_path.get_untracked()).filter(|path| !save_as && !path.is_empty()),
+                Some(read_save_path.get_untracked()).filter(|path| !save_as && !path.is_empty()).map(PathBuf::from),
             )
             .await
             else {
@@ -119,24 +121,6 @@ pub fn App() -> impl IntoView {
         save,
         original_text,
     });
-    window_event_listener(keydown, move |event| {
-        if event.meta_key() && event.key() == "s" {
-            event.prevent_default();
-            save.dispatch(event.shift_key());
-        }
-    });
-    create_effect(move |_| {
-        spawn_local({
-            async move {
-                let Some(data) = Inter::load_file(Some(read_save_path.get_untracked())).await
-                else {
-                    return;
-                };
-                text.set(data.clone());
-                original_text.set(data);
-            }
-        });
-    });
     #[cfg(not(debug_assertions))]
     {
         use leptos::ev::contextmenu;
@@ -144,27 +128,22 @@ pub fn App() -> impl IntoView {
             event.prevent_default();
         });
     }
-
     view! {
-        <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
+        <Vertical
+            class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none] px-24 pb-4"
+            gap=6
+        >
             <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-12" />
             <div
-                class="p-12 pb-60 px-24 pt-20 text-sm bg-transparent outline-none resize-none flex-1 selection:bg-darkbrown verflow-y-auto max-h-[calc(100%-3rem)]"
+                class="pt-20 text-sm whitespace-pre-wrap bg-transparent outline-none resize-none grow selection:bg-darkbrown"
+                prop:value=text
                 autocorrect="off"
                 contenteditable="true"
                 on:input=move |event| {
-                    let target = event.target();
-                    if let Some(target) = target {
-                        let value = js_sys::Reflect::get(&target, &JsValue::from_str("innerText"))
-                            .unwrap()
-                            .as_string()
-                            .unwrap_or_default();
-                        text.set(value);
-                    }
+                    text.set(event_target_value(&event));
                 }
-                style="white-space: pre-wrap;"
             >
-                {text.get()}
+                {text}
             </div>
             <StatusBar />
         </Vertical>
@@ -172,13 +151,44 @@ pub fn App() -> impl IntoView {
 }
 
 #[component]
+#[allow(clippy::too_many_lines)]
 fn StatusBar() -> impl IntoView {
-    let Context { save_path: (read_save_path, _), save, text , original_text} = use_context().unwrap();
+    macro_rules! shortcut {
+        (c-sh-$char:expr; $name:literal => $action:block) => {
+            Shortcut {
+                shift: true,
+                char: $char,
+                name: $name,
+                action: Callback::new(move |()| $action),
+            }
+        };
+        (c-$char:expr; $name:literal => $action:block) => {
+            Shortcut {
+                shift: false,
+                char: $char,
+                name: $name,
+                action: Callback::new(move |()| $action),
+            }
+        };
+    }
+    #[derive(Clone, Copy)]
+    struct Shortcut {
+        shift: bool,
+        char: char,
+        name: &'static str,
+        action: Callback<()>,
+    }
+    let Context {
+        save_path: (read_save_path, write_save_path),
+        save,
+        text,
+        original_text,
+    } = use_context().unwrap();
     let command_pressed = RwSignal::new(false);
     create_effect(move |_| {
         spawn_local({
             async move {
-                let Some(data) = Inter::load_file(Some(read_save_path.get_untracked())).await
+                let (Some(data), _) = Inter::load_file(Some(read_save_path.get_untracked().into())).await
                 else {
                     return;
                 };
@@ -192,63 +202,101 @@ fn StatusBar() -> impl IntoView {
             command_pressed.set(true);
         }
     });
-    window_event_listener(keyup, move |event| {
+    window_event_listener(keyup, move |_| {
         command_pressed.set(false);
     });
+    let shortcuts = [
+        shortcut!(
+            c-'s';
+            "Save" => {
+                save.dispatch(false);
+            }
+        ),
+        shortcut!(
+            c-sh-'s';
+            "Save as" => {
+                save.dispatch(true);
+            }
+        ),
+        shortcut!(
+            c-'q';
+            "Quit" => {
+                spawn_local(Inter::quit());
+            }
+        ),
+        shortcut!(
+            c-'n';
+            "New" => {
+                text.set(String::new());
+                write_save_path(String::new());
+            }
+        ),
+        shortcut!(
+            c-'o';
+            "Open" => {
+                spawn_local(async move {
+                    let (Some(data), Some(path)) = Inter::load_file(None).await else {
+                        return;
+                    };
+                    text.set(data);
+                    write_save_path(path.to_str().unwrap().to_string());
+                    command_pressed.set(false);
+                });
+            }
+        ),
+    ];
+    window_event_listener(keydown, move |event| {
+        for Shortcut {
+            shift,
+            char,
+            action,
+            ..
+        } in shortcuts
+        {
+            if !command_pressed() {
+                continue;
+            }
+            if shift && !event.shift_key() {
+                continue;
+            }
+            if event.key() != char.to_string() {
+                continue;
+            }
+            action(());
+        }
+    });
     view! {
-        <div class="cursor-default px-24 inset-x-0 bottom-0 p-4 pt-6 text-xs text-right select-none text-fade">
+        <div class="inset-x-0 bottom-0 p-5 px-24 text-xs text-right select-none pt-7 text-fade">
             <Horizontal class="justify-between">
                 <div class="h-6">
                     <div class="absolute transition" class=("opacity-0", command_pressed)>
-                        {move || {
-                            let path = PathBuf::from_str(&read_save_path())
-                                .ok()
-                                .map(|p| p.to_string_lossy().to_string());
-                            let formatted_path = path
-                                .map_or_else(
-                                    String::new,
-                                    |p| {
-                                        let is_dirty = text.get() != original_text.get();
-                                        let asterisk = if is_dirty {
-                                            "<span class='text-white'> *</span> "
-                                        } else {
-                                            ""
-                                        };
-                                        format!("{p}{asterisk}")
-                                    },
-                                );
-                            view! { <span inner_html=formatted_path /> }
-                        }}
+                        <Horizontal gap=1>
+                            {read_save_path}
+                            <Show when=move || {
+                                text() != original_text() && !read_save_path().is_empty()
+                            }>
+                                <div class="text-white">"*"</div>
+                            </Show>
+                        </Horizontal>
                     </div>
                     <div
                         class="absolute transition"
                         class=("opacity-0", move || !command_pressed())
                     >
                         <Horizontal gap=2>
-                            {[
-                                (
-                                    vec!["c", "S"],
-                                    "Save",
-                                    Callback::new(move |()| save.dispatch(false)),
-                                ),
-                                (
-                                    vec!["c", "sh", "S"],
-                                    "Save as",
-                                    Callback::new(move |()| save.dispatch(true)),
-                                ),
-                                (
-                                    vec!["c", "Q"],
-                                    "Quit",
-                                    Callback::new(move |()| spawn_local(Inter::quit())),
-                                ),
-                            ]
+                            {shortcuts
                                 .into_iter()
-                                .map(|(keys, name, action)| {
+                                .map(|Shortcut { shift, char, name, action }| {
+                                    let char = char.to_ascii_uppercase();
                                     view! {
-                                        <Horizontal gap=2>
-                                            <div>{keys.join("-")}</div>
-                                            <div class="text-red">{name}</div>
-                                        </Horizontal>
+                                        <button on:click=move |_| action(())>
+                                            <Horizontal gap=2 class="transition hover:brightness-150">
+                                                <div>
+                                                    {format!("c-{}{char}", if shift { "shift-" } else { "" })}
+                                                </div>
+                                                <div class="text-red">{name}</div>
+                                            </Horizontal>
+                                        </button>
                                     }
                                 })
                                 .collect_view()}
@@ -270,7 +318,6 @@ fn StatusBar() -> impl IntoView {
         </div>
     }
 }
-
 
 #[component]
 #[allow(clippy::cast_precision_loss)]
