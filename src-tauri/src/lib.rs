@@ -24,13 +24,17 @@ fn save_file(data: String, path: Option<String>) -> Option<String> {
 }
 
 #[command]
-fn load_file(path: Option<String>) -> Option<String> {
+fn load_file(path: Option<String>) -> (Option<String>, Option<String>) {
     let path = match path {
-        Some(path) => path,
-        None => FileDialog::new().pick_file()?.to_str().unwrap().to_string(),
+        Some(path) => Some(path),
+        None => FileDialog::new()
+            .pick_file()
+            .map(|path| path.to_str().unwrap().to_string()),
     };
-    let data = read_to_string(&path).unwrap();
-    Some(data)
+    match path {
+        Some(path) => (read_to_string(&path).ok(), Some(path)),
+        None => (None, None),
+    }
 }
 
 #[command]

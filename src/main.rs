@@ -10,7 +10,9 @@ use serde::Serialize;
 use console_error_panic_hook::set_once;
 use leptos::ev::{keydown, keyup};
 use leptos::{
-    component, create_action, create_effect, create_rw_signal, event_target_value, provide_context, spawn_local, use_context, window_event_listener, Action, AttributeValue, Callback, Children, CollectView, IntoView, RwSignal, Show, Signal, SignalGetUntracked, SignalSet, WriteSignal
+    component, create_action, create_effect, create_rw_signal, event_target_value, provide_context,
+    spawn_local, use_context, window_event_listener, Action, AttributeValue, Callback, Children,
+    CollectView, IntoView, RwSignal, Show, Signal, SignalGetUntracked, SignalSet, WriteSignal,
 };
 use leptos::{mount_to_body, view};
 use leptos_use::storage::use_local_storage;
@@ -71,7 +73,7 @@ impl Inter {
         Self::call("save_file", &SaveFileArgs { data, path }).await
     }
 
-    async fn load_file(path: Option<String>) -> Option<String> {
+    async fn load_file(path: Option<String>) -> (Option<String>, Option<String>) {
         #[derive(Serialize)]
         struct LoadFileArgs {
             path: Option<String>,
@@ -115,16 +117,10 @@ pub fn App() -> impl IntoView {
         save_path: (read_save_path, write_save_path),
         save,
     });
-    window_event_listener(keydown, move |event| {
-        if event.meta_key() && event.key() == "s" {
-            event.prevent_default();
-            save.dispatch(event.shift_key());
-        }
-    });
     create_effect(move |_| {
         spawn_local({
             async move {
-                let Some(data) = Inter::load_file(Some(read_save_path.get_untracked())).await
+                let (Some(data), _) = Inter::load_file(Some(read_save_path.get_untracked())).await
                 else {
                     return;
                 };
@@ -157,16 +153,105 @@ pub fn App() -> impl IntoView {
 }
 
 #[component]
+#[allow(clippy::too_many_lines)]
 fn StatusBar() -> impl IntoView {
-    let Context { save_path: (read_save_path, _), save, text } = use_context().unwrap();
+    macro_rules! shortcut {
+        (cmd shift $char:expr; $name:literal => $action:block) => {
+            Shortcut {
+                shift: true,
+                char: $char,
+                name: $name,
+                action: Callback::new(move |()| $action),
+            }
+        };
+        (cmd $char:expr; $name:literal => $action:block) => {
+            Shortcut {
+                shift: false,
+                char: $char,
+                name: $name,
+                action: Callback::new(move |()| $action),
+            }
+        };
+    }
+    #[derive(Clone, Copy)]
+    struct Shortcut {
+        shift: bool,
+        char: char,
+        name: &'static str,
+        action: Callback<()>,
+    }
+    let Context {
+        save_path: (read_save_path, write_save_path),
+        save,
+        text,
+    } = use_context().unwrap();
     let command_pressed = RwSignal::new(false);
     window_event_listener(keydown, move |event| {
         if event.meta_key() {
             command_pressed.set(true);
         }
     });
-    window_event_listener(keyup, move |event| {
-            command_pressed.set(false);
+    window_event_listener(keyup, move |_| {
+        command_pressed.set(false);
+    });
+    let shortcuts = [
+        shortcut!(
+            cmd 's';
+            "Save" => {
+                save.dispatch(false);
+            }
+        ),
+        shortcut!(
+            cmd shift 's';
+            "Save as" => {
+                save.dispatch(true);
+            }
+        ),
+        shortcut!(
+            cmd shift 'q';
+            "Quit" => {
+                spawn_local(Inter::quit());
+            }
+        ),
+        shortcut!(
+            cmd 'n';
+            "New" => {
+                text.set(String::new());
+                write_save_path(String::new());
+            }
+        ),
+        shortcut!(
+            cmd 'o';
+            "Open" => {
+                spawn_local(async move {
+                    let (Some(data), Some(path)) = Inter::load_file(None).await else {
+                        return;
+                    };
+                    text.set(data);
+                    write_save_path(path);
+                });
+            }
+        ),
+    ];
+    window_event_listener(keydown, move |event| {
+        for Shortcut {
+            shift,
+            char,
+            action,
+            ..
+        } in shortcuts
+        {
+            if !command_pressed() {
+                continue;
+            }
+            if shift && !event.shift_key() {
+                continue;
+            }
+            if event.key() != char.to_string() {
+                continue;
+            }
+            action(());
+        }
     });
     view! {
         <div class="inset-x-0 bottom-0 p-4 text-base text-right select-none text-fade">
@@ -184,29 +269,15 @@ fn StatusBar() -> impl IntoView {
                         class=("opacity-0", move || !command_pressed())
                     >
                         <Horizontal gap=2>
-                            {[
-                                (
-                                    vec!["c", "S"],
-                                    "Save",
-                                    Callback::new(move |()| save.dispatch(false)),
-                                ),
-                                (
-                                    vec!["c", "shift", "S"],
-                                    "Save as",
-                                    Callback::new(move |()| save.dispatch(true)),
-                                ),
-                                (
-                                    vec!["c", "Q"],
-                                    "Quit",
-                                    Callback::new(move |()| spawn_local(Inter::quit())),
-                                ),
-                            ]
+                            {shortcuts
                                 .into_iter()
-                                .map(|(keys, name, action)| {
+                                .map(|Shortcut { shift, char, name, action }| {
                                     view! {
                                         <button on:click=move |_| action(())>
                                             <Horizontal gap=2 class="transition hover:brightness-150">
-                                                <div>{keys.join("-")}</div>
+                                                <div>
+                                                    {format!("c-{}{char}", if shift { "shift-" } else { "" })}
+                                                </div>
                                                 <div class="text-red">{name}</div>
                                             </Horizontal>
                                         </button>
@@ -231,7 +302,6 @@ fn StatusBar() -> impl IntoView {
         </div>
     }
 }
-
 
 #[component]
 #[allow(clippy::cast_precision_loss)]
