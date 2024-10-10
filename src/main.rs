@@ -11,7 +11,7 @@ use serde::Serialize;
 use console_error_panic_hook::set_once;
 use leptos::ev::{keydown, keyup};
 use leptos::{
-    component, create_action, create_effect, create_local_resource, create_rw_signal,
+    component, create_action, create_effect, create_rw_signal,
     event_target, event_target_value, provide_context, spawn_local, use_context,
     window_event_listener, Action, AttributeValue, Callback, Children, CollectView, IntoView,
     RwSignal, Show, Signal, SignalGetUntracked, SignalSet, WriteSignal,
@@ -136,8 +136,13 @@ pub fn App() -> impl IntoView {
             event.prevent_default();
         });
     }
-    let original = create_local_resource(read_save_path, |path| async {
-        Inter::load_file(Some(path.into())).await.0
+    let original = create_rw_signal(None);
+    create_effect(move |_| {
+        spawn_local(async move {
+            original.set(Some(
+                Inter::load_file(Some(read_save_path.get_untracked().into())).await.0,
+            ));
+        });
     });
     view! {
         <Vertical
@@ -153,9 +158,7 @@ pub fn App() -> impl IntoView {
                     text.set(event_target_value(&event));
                     spawn_local(async move {
                         unsaved
-                            .set(
-                                original().flatten() != Some(text.get_untracked()),
-                            );
+                            .set(original.get_untracked().flatten() != Some(text.get_untracked()));
                     });
                 }
                 on:select=move |event| {
@@ -167,6 +170,9 @@ pub fn App() -> impl IntoView {
                                 text_area.selection_end().unwrap().unwrap() as usize,
                             )),
                         );
+                }
+                on:mousedown=move |_| {
+                    selection.set(None);
                 }
             />
             <StatusBar />
