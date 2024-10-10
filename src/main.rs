@@ -1,7 +1,5 @@
 #![warn(clippy::pedantic, clippy::nursery)]
 #![allow(clippy::must_use_candidate)]
-use std::path::PathBuf;
-use std::str::FromStr;
 
 use codee::string::FromToStringCodec;
 use serde::de::DeserializeOwned;
@@ -12,8 +10,7 @@ use leptos::ev::{keydown, keyup};
 use leptos::{
     component, create_action, create_effect, create_rw_signal, event_target_value, provide_context,
     spawn_local, use_context, window_event_listener, Action, AttributeValue, Callback, Children,
-    CollectView, IntoView, RwSignal, Show, Signal, SignalGet, SignalGetUntracked, SignalSet,
-    WriteSignal,
+    CollectView, IntoView, RwSignal, Show, Signal, SignalGetUntracked, SignalSet, WriteSignal,
 };
 use leptos::{mount_to_body, view};
 use leptos_use::storage::use_local_storage;
@@ -195,8 +192,7 @@ fn StatusBar() -> impl IntoView {
     create_effect(move |_| {
         spawn_local({
             async move {
-                let (Some(data), _) =
-                    Inter::load_file(Some(read_save_path.get_untracked())).await
+                let (Some(data), _) = Inter::load_file(Some(read_save_path.get_untracked())).await
                 else {
                     return;
                 };
@@ -278,28 +274,11 @@ fn StatusBar() -> impl IntoView {
             <Horizontal class="justify-between">
                 <div class="h-6">
                     <div class="absolute transition" class=("opacity-0", command_pressed)>
-                        {move || {
-                            let path = PathBuf::from_str(&read_save_path())
-                                .ok()
-                                .map(|p| p.to_string_lossy().to_string());
-                            let formatted_path = path
-                                .map_or_else(
-                                    String::new,
-                                    |p| {
-                                        let is_dirty = text.get() != original_text.get();
-                                        let asterisk = if is_dirty {
-                                            "<span class='text-white'> *</span> "
-                                        } else {
-                                            ""
-                                        };
-                                        format!("{p}{asterisk}")
-                                    },
-                                );
-                            view! {
-                                // Check for unsaved changes
-                                <span inner_html=formatted_path />
-                            }
-                        }}
+                        <Horizontal gap=1>
+                            {read_save_path} <Show when=move || text() != original_text()>
+                                <div class="text-white">"*"</div>
+                            </Show>
+                        </Horizontal>
                     </div>
                     <div
                         class="absolute transition"
