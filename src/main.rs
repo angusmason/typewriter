@@ -199,11 +199,11 @@ fn StatusBar() -> impl IntoView {
                                     |p| {
                                         let is_dirty = text.get() != original_text.get();
                                         let asterisk = if is_dirty {
-                                            "<span class='text-white'>*</span> "
+                                            "<span class='text-white'> *</span> "
                                         } else {
                                             ""
                                         };
-                                        format!("{asterisk}{p}")
+                                        format!("{p}{asterisk}")
                                     },
                                 );
                             view! {
