@@ -148,7 +148,7 @@ pub fn App() -> impl IntoView {
         <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
             <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-12" />
             <textarea
-                class="p-12 pb-48 pt-20 px-24 text-sm bg-transparent outline-none resize-none grow selection:bg-darkbrown"
+                class="p-12 pb-72 pt-20 px-24 text-sm bg-transparent outline-none resize-none grow selection:bg-darkbrown"
                 prop:value=text
                 autocorrect="off"
                 on:input=move |event| {
@@ -185,7 +185,7 @@ fn StatusBar() -> impl IntoView {
         command_pressed.set(false);
     });
     view! {
-        <div class="cursor-default px-24 inset-x-0 bottom-0 p-5 pt-7 text-xs text-right select-none text-fade">
+        <div class="cursor-default px-24 inset-x-0 bottom-0 p-4 pt-6 text-xs text-right select-none text-fade">
             <Horizontal class="justify-between">
                 <div class="h-6">
                     <div class="absolute transition" class=("opacity-0", command_pressed)>
