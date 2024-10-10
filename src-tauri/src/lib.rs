@@ -1,6 +1,6 @@
 use std::{
     fs::{read_to_string, write},
-    path,
+    path::{self, PathBuf},
     sync::Mutex,
 };
 
@@ -9,27 +9,22 @@ use tauri::{command, generate_context, generate_handler, AppHandle, Builder, Man
 use tauri_plugin_decorum::WebviewWindowExt;
 
 #[command]
-fn save_file(data: String, path: Option<String>) -> Option<String> {
+fn save_file(data: String, path: Option<PathBuf>) -> Option<PathBuf> {
     let path = match path {
         Some(path) => path,
         None => FileDialog::new()
             .set_can_create_directories(true)
-            .save_file()?
-            .to_str()
-            .unwrap()
-            .to_string(),
+            .save_file()?,
     };
     write(&path, data).unwrap();
     Some(path)
 }
 
 #[command]
-fn load_file(path: Option<String>) -> (Option<String>, Option<String>) {
+fn load_file(path: Option<PathBuf>) -> (Option<String>, Option<PathBuf>) {
     let path = match path {
         Some(path) => Some(path),
-        None => FileDialog::new()
-            .pick_file()
-            .map(|path| path.to_str().unwrap().to_string()),
+        None => FileDialog::new().pick_file(),
     };
     match path {
         Some(path) => (read_to_string(&path).ok(), Some(path)),

@@ -1,6 +1,8 @@
 #![warn(clippy::pedantic, clippy::nursery)]
 #![allow(clippy::must_use_candidate)]
 
+use std::path::PathBuf;
+
 use codee::string::FromToStringCodec;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -62,19 +64,19 @@ impl Inter {
         from_value(invoke(cmd, to_value(args).unwrap()).await).unwrap()
     }
 
-    async fn save_file(data: String, path: Option<String>) -> Option<String> {
+    async fn save_file(data: String, path: Option<PathBuf>) -> Option<String> {
         #[derive(Serialize)]
         struct SaveFileArgs {
             data: String,
-            path: Option<String>,
+            path: Option<PathBuf>,
         }
         Self::call("save_file", &SaveFileArgs { data, path }).await
     }
 
-    async fn load_file(path: Option<String>) -> (Option<String>, Option<String>) {
+    async fn load_file(path: Option<PathBuf>) -> (Option<String>, Option<PathBuf>) {
         #[derive(Serialize)]
         struct LoadFileArgs {
-            path: Option<String>,
+            path: Option<PathBuf>,
         }
         Self::call("load_file", &LoadFileArgs { path }).await
     }
@@ -103,7 +105,7 @@ pub fn App() -> impl IntoView {
         async move {
             let Some(path) = Inter::save_file(
                 text.get_untracked(),
-                Some(read_save_path.get_untracked()).filter(|path| !save_as && !path.is_empty()),
+                Some(read_save_path.get_untracked()).filter(|path| !save_as && !path.is_empty()).map(PathBuf::from),
             )
             .await
             else {
@@ -119,17 +121,6 @@ pub fn App() -> impl IntoView {
         save,
         original_text,
     });
-    create_effect(move |_| {
-        spawn_local({
-            async move {
-                let (Some(data), _) = Inter::load_file(Some(read_save_path.get_untracked())).await
-                else {
-                    return;
-                };
-                text.set(data);
-            }
-        });
-    });
     #[cfg(not(debug_assertions))]
     {
         use leptos::ev::contextmenu;
@@ -137,7 +128,6 @@ pub fn App() -> impl IntoView {
             event.prevent_default();
         });
     }
-
     view! {
         <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
             <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-12" />
@@ -192,7 +182,7 @@ fn StatusBar() -> impl IntoView {
     create_effect(move |_| {
         spawn_local({
             async move {
-                let (Some(data), _) = Inter::load_file(Some(read_save_path.get_untracked())).await
+                let (Some(data), _) = Inter::load_file(Some(read_save_path.get_untracked().into())).await
                 else {
                     return;
                 };
@@ -243,7 +233,7 @@ fn StatusBar() -> impl IntoView {
                         return;
                     };
                     text.set(data);
-                    write_save_path(path);
+                    write_save_path(path.to_str().unwrap().to_string());
                     command_pressed.set(false);
                 });
             }
@@ -275,7 +265,10 @@ fn StatusBar() -> impl IntoView {
                 <div class="h-6">
                     <div class="absolute transition" class=("opacity-0", command_pressed)>
                         <Horizontal gap=1>
-                            {read_save_path} <Show when=move || text() != original_text()>
+                            {read_save_path}
+                            <Show when=move || {
+                                text() != original_text() && !read_save_path().is_empty()
+                            }>
                                 <div class="text-white">"*"</div>
                             </Show>
                         </Horizontal>
