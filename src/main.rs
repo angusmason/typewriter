@@ -10,7 +10,7 @@ use serde::Serialize;
 use console_error_panic_hook::set_once;
 use leptos::ev::{keydown, keyup};
 use leptos::{
-    component, create_action, create_effect, create_rw_signal, event_target_value, provide_context, spawn_local, use_context, window_event_listener, Action, AttributeValue, Callback, Children, CollectView, IntoView, RwSignal, Show, Signal, SignalGetUntracked, SignalSet, WriteSignal
+    component, create_action, create_effect, create_rw_signal, event_target_value, provide_context, spawn_local, use_context, window_event_listener, Action, AttributeValue, Callback, Children, CollectView, IntoView, RwSignal, Show, Signal, SignalGet, SignalGetUntracked, SignalSet, WriteSignal
 };
 use leptos::{mount_to_body, view};
 use leptos_use::storage::use_local_storage;
@@ -89,11 +89,13 @@ struct Context {
     text: RwSignal<String>,
     save_path: (Signal<String>, WriteSignal<String>),
     save: Action<bool, ()>,
+    original_text: RwSignal<String>,
 }
 
 #[component]
 pub fn App() -> impl IntoView {
     let text = create_rw_signal(String::new());
+    let original_text = create_rw_signal(String::new());
     let (read_save_path, write_save_path, _) =
         use_local_storage::<String, FromToStringCodec>("save_path");
     let save = create_action(move |save_as| {
@@ -108,12 +110,14 @@ pub fn App() -> impl IntoView {
                 return;
             };
             write_save_path(path);
+            original_text.set(text.get_untracked());
         }
     });
     provide_context(Context {
         text,
         save_path: (read_save_path, write_save_path),
         save,
+        original_text,
     });
     window_event_listener(keydown, move |event| {
         if event.meta_key() && event.key() == "s" {
@@ -158,15 +162,29 @@ pub fn App() -> impl IntoView {
 
 #[component]
 fn StatusBar() -> impl IntoView {
-    let Context { save_path: (read_save_path, _), save, text } = use_context().unwrap();
+    let Context { save_path: (read_save_path, _), save, text , original_text} = use_context().unwrap();
     let command_pressed = RwSignal::new(false);
+    create_effect(move |_| {
+        spawn_local({
+            async move {
+                let Some(data) = Inter::load_file(Some(read_save_path.get_untracked())).await
+                else {
+                    return;
+                };
+                text.set(data.clone());
+                original_text.set(data); // Set the loaded text as original
+            }
+        });
+    });
     window_event_listener(keydown, move |event| {
         if event.meta_key() {
             command_pressed.set(true);
         }
     });
     window_event_listener(keyup, move |event| {
+        if event.meta_key() {
             command_pressed.set(false);
+        }
     });
     view! {
         <div class="px-24 inset-x-0 bottom-0 p-5 pt-7 text-xs text-right select-none text-fade">
@@ -174,9 +192,11 @@ fn StatusBar() -> impl IntoView {
                 <div class="h-6">
                     <div class="absolute transition" class=("opacity-0", command_pressed)>
                         {move || {
-                            PathBuf::from_str(&read_save_path())
+                            let path = PathBuf::from_str(&read_save_path())
                                 .ok()
-                                .map(|path| { path.to_string_lossy().to_string() })
+                                .map(|path| { path.to_string_lossy().to_string() });
+                            let is_dirty = text.get() != original_text.get();
+                            path.map_or_else(String::new, |p| format!("{}{}", p, if is_dirty { "*" } else { "" }))
                         }}
                     </div>
                     <div
