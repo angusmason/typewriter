@@ -1,6 +1,7 @@
 #![warn(clippy::pedantic, clippy::nursery)]
 #![allow(clippy::must_use_candidate)]
 
+use std::borrow::Cow;
 use std::path::PathBuf;
 
 use codee::string::FromToStringCodec;
@@ -10,9 +11,10 @@ use serde::Serialize;
 use console_error_panic_hook::set_once;
 use leptos::ev::{keydown, keyup};
 use leptos::{
-    component, create_action, create_effect, create_rw_signal, event_target_value, provide_context,
-    spawn_local, use_context, window_event_listener, Action, AttributeValue, Callback, Children,
-    CollectView, IntoView, RwSignal, Show, Signal, SignalGetUntracked, SignalSet, WriteSignal,
+    component, create_action, create_effect, create_local_resource, create_rw_signal,
+    event_target, event_target_value, provide_context, spawn_local, use_context,
+    window_event_listener, Action, AttributeValue, Callback, Children, CollectView, IntoView,
+    RwSignal, Show, Signal, SignalGetUntracked, SignalSet, WriteSignal,
 };
 use leptos::{mount_to_body, view};
 use leptos_use::storage::use_local_storage;
@@ -20,6 +22,7 @@ use serde_wasm_bindgen::{from_value, to_value};
 use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsValue;
+use web_sys::HtmlTextAreaElement;
 
 #[allow(unused_macros)]
 macro_rules! dbg {
@@ -92,6 +95,7 @@ struct Context {
     save_path: (Signal<String>, WriteSignal<String>),
     save: Action<bool, ()>,
     unsaved: RwSignal<bool>,
+    selection: RwSignal<Option<(usize, usize)>>,
 }
 
 #[component]
@@ -105,7 +109,9 @@ pub fn App() -> impl IntoView {
         async move {
             let Some(path) = Inter::save_file(
                 text.get_untracked(),
-                Some(read_save_path.get_untracked()).filter(|path| !save_as && !path.is_empty()).map(PathBuf::from),
+                Some(read_save_path.get_untracked())
+                    .filter(|path| !save_as && !path.is_empty())
+                    .map(PathBuf::from),
             )
             .await
             else {
@@ -115,11 +121,13 @@ pub fn App() -> impl IntoView {
             unsaved.set(false);
         }
     });
+    let selection = create_rw_signal(None);
     provide_context(Context {
         text,
         save_path: (read_save_path, write_save_path),
         save,
         unsaved,
+        selection,
     });
     #[cfg(not(debug_assertions))]
     {
@@ -128,6 +136,9 @@ pub fn App() -> impl IntoView {
             event.prevent_default();
         });
     }
+    let original = create_local_resource(read_save_path, |path| async {
+        Inter::load_file(Some(path.into())).await.0
+    });
     view! {
         <Vertical
             class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none] px-24 pb-4"
@@ -140,7 +151,22 @@ pub fn App() -> impl IntoView {
                 autocorrect="off"
                 on:input=move |event| {
                     text.set(event_target_value(&event));
-                    unsaved.set(true);
+                    spawn_local(async move {
+                        unsaved
+                            .set(
+                                original().flatten() != Some(text.get_untracked()),
+                            );
+                    });
+                }
+                on:select=move |event| {
+                    let text_area: HtmlTextAreaElement = event_target(&event);
+                    selection
+                        .set(
+                            Some((
+                                text_area.selection_start().unwrap().unwrap() as usize,
+                                text_area.selection_end().unwrap().unwrap() as usize,
+                            )),
+                        );
                 }
             />
             <StatusBar />
@@ -181,12 +207,14 @@ fn StatusBar() -> impl IntoView {
         save,
         text,
         unsaved,
+        selection,
     } = use_context().unwrap();
     let command_pressed = RwSignal::new(false);
     create_effect(move |_| {
         spawn_local({
             async move {
-                let (Some(data), _) = Inter::load_file(Some(read_save_path.get_untracked().into())).await
+                let (Some(data), _) =
+                    Inter::load_file(Some(read_save_path.get_untracked().into())).await
                 else {
                     return;
                 };
@@ -268,8 +296,7 @@ fn StatusBar() -> impl IntoView {
                 <div class="h-6">
                     <div class="absolute transition" class=("opacity-0", command_pressed)>
                         <Horizontal gap=1>
-                            {read_save_path}
-                            <Show when=unsaved>
+                            {read_save_path} <Show when=unsaved>
                                 <div class="text-white">"*"</div>
                             </Show>
                         </Horizontal>
@@ -301,6 +328,11 @@ fn StatusBar() -> impl IntoView {
                 <Show when=move || { !text().is_empty() } fallback=|| view! { <div /> }>
                     {move || {
                         let text = text();
+                        let text = selection()
+                            .map_or_else(
+                                || (&text).into(),
+                                |(start, end)| Cow::from(&text[start..end]),
+                            );
                         format!(
                             "{lines}L {words}W {chars}C",
                             lines = text.lines().count(),
