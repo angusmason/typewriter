@@ -12,7 +12,8 @@ use leptos::ev::{keydown, keyup};
 use leptos::{
     component, create_action, create_effect, create_rw_signal, event_target_value, provide_context,
     spawn_local, use_context, window_event_listener, Action, AttributeValue, Callback, Children,
-    CollectView, IntoView, RwSignal, Show, Signal, SignalGetUntracked, SignalSet, WriteSignal,
+    CollectView, IntoView, RwSignal, Show, Signal, SignalGet, SignalGetUntracked, SignalSet,
+    WriteSignal,
 };
 use leptos::{mount_to_body, view};
 use leptos_use::storage::use_local_storage;
@@ -91,11 +92,13 @@ struct Context {
     text: RwSignal<String>,
     save_path: (Signal<String>, WriteSignal<String>),
     save: Action<bool, ()>,
+    original_text: RwSignal<String>,
 }
 
 #[component]
 pub fn App() -> impl IntoView {
     let text = create_rw_signal(String::new());
+    let original_text = create_rw_signal(String::new());
     let (read_save_path, write_save_path, _) =
         use_local_storage::<String, FromToStringCodec>("save_path");
     let save = create_action(move |save_as| {
@@ -110,12 +113,14 @@ pub fn App() -> impl IntoView {
                 return;
             };
             write_save_path(path);
+            original_text.set(text.get_untracked());
         }
     });
     provide_context(Context {
         text,
         save_path: (read_save_path, write_save_path),
         save,
+        original_text,
     });
     create_effect(move |_| {
         spawn_local({
@@ -140,7 +145,7 @@ pub fn App() -> impl IntoView {
         <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
             <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-12" />
             <textarea
-                class="p-8 px-24 text-base bg-transparent outline-none resize-none grow selection:bg-darkbrown"
+                class="px-24 pt-20 text-sm bg-transparent outline-none resize-none pb-72 grow selection:bg-darkbrown"
                 prop:value=text
                 autocorrect="off"
                 on:input=move |event| {
@@ -156,7 +161,7 @@ pub fn App() -> impl IntoView {
 #[allow(clippy::too_many_lines)]
 fn StatusBar() -> impl IntoView {
     macro_rules! shortcut {
-        (cmd shift $char:expr; $name:literal => $action:block) => {
+        (c-sh-$char:expr; $name:literal => $action:block) => {
             Shortcut {
                 shift: true,
                 char: $char,
@@ -164,7 +169,7 @@ fn StatusBar() -> impl IntoView {
                 action: Callback::new(move |()| $action),
             }
         };
-        (cmd $char:expr; $name:literal => $action:block) => {
+        (c-$char:expr; $name:literal => $action:block) => {
             Shortcut {
                 shift: false,
                 char: $char,
@@ -184,8 +189,22 @@ fn StatusBar() -> impl IntoView {
         save_path: (read_save_path, write_save_path),
         save,
         text,
+        original_text,
     } = use_context().unwrap();
     let command_pressed = RwSignal::new(false);
+    create_effect(move |_| {
+        spawn_local({
+            async move {
+                let (Some(data), _) =
+                    Inter::load_file(Some(read_save_path.get_untracked())).await
+                else {
+                    return;
+                };
+                text.set(data.clone());
+                original_text.set(data); // Set the loaded text as original
+            }
+        });
+    });
     window_event_listener(keydown, move |event| {
         if event.meta_key() {
             command_pressed.set(true);
@@ -196,32 +215,32 @@ fn StatusBar() -> impl IntoView {
     });
     let shortcuts = [
         shortcut!(
-            cmd 's';
+            c-'s';
             "Save" => {
                 save.dispatch(false);
             }
         ),
         shortcut!(
-            cmd shift 's';
+            c-sh-'s';
             "Save as" => {
                 save.dispatch(true);
             }
         ),
         shortcut!(
-            cmd shift 'q';
+            c-'q';
             "Quit" => {
                 spawn_local(Inter::quit());
             }
         ),
         shortcut!(
-            cmd 'n';
+            c-'n';
             "New" => {
                 text.set(String::new());
                 write_save_path(String::new());
             }
         ),
         shortcut!(
-            cmd 'o';
+            c-'o';
             "Open" => {
                 spawn_local(async move {
                     let (Some(data), Some(path)) = Inter::load_file(None).await else {
@@ -254,14 +273,31 @@ fn StatusBar() -> impl IntoView {
         }
     });
     view! {
-        <div class="inset-x-0 bottom-0 p-4 text-base text-right select-none text-fade">
+        <div class="inset-x-0 bottom-0 p-4 px-24 pt-6 text-xs text-right cursor-default select-none text-fade">
             <Horizontal class="justify-between">
                 <div class="h-6">
                     <div class="absolute transition" class=("opacity-0", command_pressed)>
                         {move || {
-                            PathBuf::from_str(&read_save_path())
+                            let path = PathBuf::from_str(&read_save_path())
                                 .ok()
-                                .map(|path| { path.to_string_lossy().to_string() })
+                                .map(|p| p.to_string_lossy().to_string());
+                            let formatted_path = path
+                                .map_or_else(
+                                    String::new,
+                                    |p| {
+                                        let is_dirty = text.get() != original_text.get();
+                                        let asterisk = if is_dirty {
+                                            "<span class='text-white'> *</span> "
+                                        } else {
+                                            ""
+                                        };
+                                        format!("{p}{asterisk}")
+                                    },
+                                );
+                            view! {
+                                // Check for unsaved changes
+                                <span inner_html=formatted_path />
+                            }
                         }}
                     </div>
                     <div
