@@ -64,6 +64,12 @@ impl Inter {
         from_value(invoke(cmd, to_value(args).unwrap()).await).unwrap()
     }
 
+    /// Saves a file containing some data to a path, prompting the user if the path is [`None`].
+    ///
+    /// Returns the path to the file or [`None`] if the
+    /// user cancelled the save by closing the dialog.
+    ///
+    /// Panics if the data couldn't be written.
     async fn save_file(data: String, path: Option<PathBuf>) -> Option<String> {
         #[derive(Serialize)]
         struct SaveFileArgs {
@@ -73,6 +79,15 @@ impl Inter {
         Self::call("save_file", &SaveFileArgs { data, path }).await
     }
 
+    /// Loads a file from a path.
+    /// Returns a tuple containing the data in the file and the path to the file.
+    ///
+    /// The returned data is [`None`] if the file couldn't be read (it didn't exist, or did not
+    /// contain valid UTF-8) - or if the supplied path was [`None`] and the user did not provide a
+    /// fallback (they cancelled the load by closing the dialog).
+    ///
+    /// The returned path is [`None`] if the supplied path was [`None`] and the user did not
+    /// provide a fallback (they cancelled the load by closing the dialog).
     async fn load_file(path: Option<PathBuf>) -> (Option<String>, Option<PathBuf>) {
         #[derive(Serialize)]
         struct LoadFileArgs {
@@ -81,6 +96,7 @@ impl Inter {
         Self::call("load_file", &LoadFileArgs { path }).await
     }
 
+    /// Quits the program. Exit code is `0` (success).
     async fn quit() {
         invoke_without_args("quit").await;
     }
