@@ -91,15 +91,15 @@ struct Context {
     text: RwSignal<String>,
     save_path: (Signal<String>, WriteSignal<String>),
     save: Action<bool, ()>,
-    original_text: RwSignal<String>,
+    unsaved: RwSignal<bool>,
 }
 
 #[component]
 pub fn App() -> impl IntoView {
     let text = create_rw_signal(String::new());
-    let original_text = create_rw_signal(String::new());
     let (read_save_path, write_save_path, _) =
         use_local_storage::<String, FromToStringCodec>("save_path");
+    let unsaved = create_rw_signal(false);
     let save = create_action(move |save_as| {
         let save_as: bool = *save_as;
         async move {
@@ -112,14 +112,14 @@ pub fn App() -> impl IntoView {
                 return;
             };
             write_save_path(path);
-            original_text.set(text.get_untracked());
+            unsaved.set(false);
         }
     });
     provide_context(Context {
         text,
         save_path: (read_save_path, write_save_path),
         save,
-        original_text,
+        unsaved,
     });
     #[cfg(not(debug_assertions))]
     {
@@ -140,6 +140,7 @@ pub fn App() -> impl IntoView {
                 autocorrect="off"
                 on:input=move |event| {
                     text.set(event_target_value(&event));
+                    unsaved.set(true);
                 }
             />
             <StatusBar />
@@ -179,7 +180,7 @@ fn StatusBar() -> impl IntoView {
         save_path: (read_save_path, write_save_path),
         save,
         text,
-        original_text,
+        unsaved,
     } = use_context().unwrap();
     let command_pressed = RwSignal::new(false);
     create_effect(move |_| {
@@ -189,8 +190,7 @@ fn StatusBar() -> impl IntoView {
                 else {
                     return;
                 };
-                text.set(data.clone());
-                original_text.set(data); // Set the loaded text as original
+                text.set(data);
             }
         });
     });
@@ -269,9 +269,7 @@ fn StatusBar() -> impl IntoView {
                     <div class="absolute transition" class=("opacity-0", command_pressed)>
                         <Horizontal gap=1>
                             {read_save_path}
-                            <Show when=move || {
-                                text() != original_text() && !read_save_path().is_empty()
-                            }>
+                            <Show when=unsaved>
                                 <div class="text-white">"*"</div>
                             </Show>
                         </Horizontal>
