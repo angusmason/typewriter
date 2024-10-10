@@ -204,24 +204,6 @@ fn StatusBar() -> impl IntoView {
     });
     let shortcuts = [
         shortcut!(
-            c-'s';
-            "Save" => {
-                save.dispatch(false);
-            }
-        ),
-        shortcut!(
-            c-sh-'s';
-            "Save as" => {
-                save.dispatch(true);
-            }
-        ),
-        shortcut!(
-            c-'q';
-            "Quit" => {
-                spawn_local(Inter::quit());
-            }
-        ),
-        shortcut!(
             c-'n';
             "New" => {
                 text.set(String::new());
@@ -239,6 +221,24 @@ fn StatusBar() -> impl IntoView {
                     write_save_path(path.to_str().unwrap().to_string());
                     command_pressed.set(false);
                 });
+            }
+        ),
+        shortcut!(
+            c-'s';
+            "Save" => {
+                save.dispatch(false);
+            }
+        ),
+        shortcut!(
+            c-sh-'s';
+            "Save as" => {
+                save.dispatch(true);
+            }
+        ),
+        shortcut!(
+            c-'q';
+            "Quit" => {
+                spawn_local(Inter::quit());
             }
         ),
     ];
