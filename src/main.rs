@@ -143,7 +143,6 @@ pub fn App() -> impl IntoView {
                     text.set(event_target_value(&event));
                 }
             >
-                {text}
             </div>
             <StatusBar />
         </Vertical>
@@ -266,7 +265,7 @@ fn StatusBar() -> impl IntoView {
         }
     });
     view! {
-        <div class="inset-x-0 bottom-0 p-5 px-24 text-xs text-right select-none pt-7 text-fade">
+        <div class="text-xs text-right select-none text-fade">
             <Horizontal class="justify-between">
                 <div class="h-6">
                     <div class="absolute transition" class=("opacity-0", command_pressed)>
