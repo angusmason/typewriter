@@ -248,6 +248,7 @@ fn StatusBar() -> impl IntoView {
                     };
                     text.set(data);
                     write_save_path(path);
+                    command_pressed.set(false);
                 });
             }
         ),
@@ -308,6 +309,7 @@ fn StatusBar() -> impl IntoView {
                             {shortcuts
                                 .into_iter()
                                 .map(|Shortcut { shift, char, name, action }| {
+                                    let char = char.to_ascii_uppercase();
                                     view! {
                                         <button on:click=move |_| action(())>
                                             <Horizontal gap=2 class="transition hover:brightness-150">
