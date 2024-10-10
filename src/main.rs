@@ -352,7 +352,7 @@ fn StatusBar() -> impl IntoView {
                                     let char = char.to_ascii_uppercase();
                                     view! {
                                         <button on:click=move |_| action(())>
-                                            <Horizontal gap=2 class="transition hover:brightness-150">
+                                            <Horizontal gap=2 class="transition hover:brightness-125">
                                                 <div>
                                                     {format!("c-{}{char}", if shift { "sh-" } else { "" })}
                                                 </div>
