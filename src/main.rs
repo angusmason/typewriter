@@ -11,10 +11,7 @@ use serde::Serialize;
 use console_error_panic_hook::set_once;
 use leptos::ev::{keydown, keyup};
 use leptos::{
-    component, create_action, create_effect, create_rw_signal,
-    event_target, event_target_value, provide_context, spawn_local, use_context,
-    window_event_listener, Action, AttributeValue, Callback, Children, CollectView, IntoView,
-    RwSignal, Show, Signal, SignalGetUntracked, SignalSet, WriteSignal,
+    component, create_action, create_effect, create_rw_signal, event_target, event_target_value, provide_context, spawn_local, use_context, window_event_listener, Action, AttributeValue, Callback, Children, CollectView, IntoView, RwSignal, Show, Signal, SignalGetUntracked, SignalSet, SignalUpdate, WriteSignal
 };
 use leptos::{mount_to_body, view};
 use leptos_use::storage::use_local_storage;
@@ -173,6 +170,27 @@ pub fn App() -> impl IntoView {
                 }
                 on:mousedown=move |_| {
                     selection.set(None);
+                }
+                on:keydown=move |event| {
+                    if event.key() == "Tab" {
+                        event.prevent_default();
+                        let text_area = event_target::<HtmlTextAreaElement>(&event);
+                        let selection = selection
+                            .get_untracked()
+                            .unwrap_or_else(|| (
+                                text_area.selection_start().unwrap().unwrap() as usize,
+                                text_area.selection_end().unwrap().unwrap() as usize,
+                            ));
+                        text.update(|text| {
+                            *text = format!("{}\t{}", &text[0..selection.0], &text[selection.1..]);
+                        });
+                        let position = selection.0 + 1;
+                        #[allow(clippy::cast_possible_truncation)]
+                        {
+                            text_area.set_selection_start(Some(position as u32)).unwrap();
+                            text_area.set_selection_end(Some(position as u32)).unwrap();
+                        }
+                    }
                 }
             />
             <StatusBar />
@@ -333,12 +351,12 @@ fn StatusBar() -> impl IntoView {
                 </div>
                 <Show when=move || { !text().is_empty() } fallback=|| view! { <div /> }>
                     {move || {
-                        let text = text();
-                        let text = selection()
-                            .map_or_else(
-                                || (&text).into(),
-                                |(start, end)| Cow::from(&text[start..end]),
-                            );
+                        let text = Cow::from(text());
+                        let text = if let Some((start, end)) = selection() {
+                            text.get(start..end).unwrap_or(&text).into()
+                        } else {
+                            text
+                        };
                         format!(
                             "{lines}L {words}W {chars}C",
                             lines = text.lines().count(),
