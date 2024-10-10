@@ -129,10 +129,13 @@ pub fn App() -> impl IntoView {
         });
     }
     view! {
-        <Vertical class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none]">
+        <Vertical
+            class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none] px-24 pb-4"
+            gap=6
+        >
             <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-12" />
             <textarea
-                class="px-24 pt-20 text-sm bg-transparent outline-none resize-none pb-72 grow selection:bg-darkbrown"
+                class="pt-20 text-sm bg-transparent outline-none resize-none grow selection:bg-darkbrown"
                 prop:value=text
                 autocorrect="off"
                 on:input=move |event| {
@@ -260,7 +263,7 @@ fn StatusBar() -> impl IntoView {
         }
     });
     view! {
-        <div class="inset-x-0 bottom-0 p-4 px-24 pt-6 text-xs text-right cursor-default select-none text-fade">
+        <div class="text-xs text-right select-none text-fade">
             <Horizontal class="justify-between">
                 <div class="h-6">
                     <div class="absolute transition" class=("opacity-0", command_pressed)>
