@@ -217,9 +217,7 @@ fn StatusBar() -> impl IntoView {
                                         format!("{p}{asterisk}")
                                     },
                                 );
-                            view! {
-                                <span inner_html=formatted_path />
-                            }
+                            view! { <span inner_html=formatted_path /> }
                         }}
                     </div>
                     <div
