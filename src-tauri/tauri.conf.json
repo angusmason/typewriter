@@ -15,7 +15,9 @@
       {
         "title": "Typewriter",
         "width": 1080,
+        "minWidth": 675,
         "height": 740,
+        "minHeight": 462.5,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true
       }
