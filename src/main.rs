@@ -159,7 +159,7 @@ pub fn App() -> impl IntoView {
     });
     view! {
         <Vertical
-            class="h-full text-text bg-background caret-accent [&_*]:[font-synthesis:none] px-24 pb-4"
+            class="h-full text-text bg-background caret-caret [&_*]:[font-synthesis:none] px-24 pb-4"
             gap=6
         >
             <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-12" />
