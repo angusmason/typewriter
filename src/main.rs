@@ -387,10 +387,10 @@ fn StatusBar() -> impl IntoView {
                     >
                         <Horizontal gap=1>
                             <Show when=show_find_input>
-                                <div>"find:"</div>
+                                <div class="text-white">"find:"</div>
                                 <input
                                     type="text"
-                                    class="bg-brown transition cursor-text select-text selection:bg-darkbrown"
+                                    class="text-white bg-brown transition cursor-text select-text selection:bg-darkbrown"
                                     prop:value=find_text
                                     on:input=move |_| {
                                         find_matches();
