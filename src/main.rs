@@ -1,6 +1,7 @@
 #![warn(clippy::pedantic, clippy::nursery)]
 #![allow(clippy::must_use_candidate)]
 
+use std::array::from_fn;
 use std::borrow::Cow;
 use std::path::PathBuf;
 
@@ -112,6 +113,7 @@ struct Context {
 }
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn App() -> impl IntoView {
     let text = create_rw_signal(String::new());
     let (read_save_path, write_save_path, _) =
@@ -151,9 +153,10 @@ pub fn App() -> impl IntoView {
     }
     let original = create_rw_signal(None);
     create_effect(move |_| {
+        let read_save_path = read_save_path();
         spawn_local(async move {
             original.set(Some(
-                Inter::load_file(Some(read_save_path.get_untracked().into())).await.0,
+                Inter::load_file(Some(read_save_path.into())).await.0,
             ));
         });
     });
@@ -164,7 +167,7 @@ pub fn App() -> impl IntoView {
         >
             <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-12" />
             <textarea
-                class="pt-20 text-sm bg-transparent outline-none resize-none grow selection:bg-darkbrown"
+                class="pt-20 text-sm whitespace-pre-wrap bg-transparent outline-none resize-none size-full selection:bg-darkbrown"
                 prop:value=text
                 autocorrect="off"
                 on:input=move |event| {
@@ -336,7 +339,20 @@ fn StatusBar() -> impl IntoView {
                 <div class="h-6">
                     <div class="absolute transition" class=("opacity-0", command_pressed)>
                         <Horizontal gap=1>
-                            {read_save_path} <Show when=unsaved>
+                            {move || {
+                                let path = PathBuf::from(read_save_path());
+                                let mut components = path.components();
+                                let mut components: [_; 4] = from_fn(|_| {
+                                    components.next_back()
+                                });
+                                components.reverse();
+                                components
+                                    .into_iter()
+                                    .flatten()
+                                    .collect::<PathBuf>()
+                                    .to_string_lossy()
+                                    .to_string()
+                            }} <Show when=unsaved>
                                 <div class="text-white">"*"</div>
                             </Show>
                         </Horizontal>
