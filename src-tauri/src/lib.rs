@@ -5,7 +5,7 @@ use std::{
 };
 
 use rfd::FileDialog;
-use tauri::{command, generate_context, generate_handler, AppHandle, Builder, Manager, State};
+use tauri::{command, generate_context, generate_handler, AppHandle, Builder, Manager};
 use tauri_plugin_decorum::WebviewWindowExt;
 
 #[command]

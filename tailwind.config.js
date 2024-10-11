@@ -10,10 +10,12 @@ module.exports = {
         'sans': ["Mono"],
       },
       colors: {
-        'brown': '#29272B',
-        'darkbrown': '#080809',
-        'red': '#CA695C',
-        'fade': '#655F6A'
+        'background': '#222222',
+        'highlight': '#080707',
+        'accent': '#888888',
+        'fade': '#545354',
+        'text': "#EEEEEE",
+        'caret': "#EEEEEE",
       },
     },
   },

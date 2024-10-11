@@ -12,7 +12,10 @@ use serde::Serialize;
 use console_error_panic_hook::set_once;
 use leptos::ev::{keydown, keyup};
 use leptos::{
-    component, create_action, create_effect, create_rw_signal, event_target, event_target_value, provide_context, spawn_local, use_context, window_event_listener, Action, AttributeValue, Callback, Children, CollectView, IntoView, RwSignal, Show, Signal, SignalGetUntracked, SignalSet, SignalUpdate, WriteSignal
+    component, create_action, create_effect, create_rw_signal, event_target, event_target_value,
+    provide_context, spawn_local, use_context, window_event_listener, Action, AttributeValue,
+    Callback, Children, CollectView, IntoView, RwSignal, Show, Signal, SignalGet,
+    SignalGetUntracked, SignalSet, SignalUpdate, ViewFn, WriteSignal,
 };
 use leptos::{mount_to_body, view};
 use leptos_use::storage::use_local_storage;
@@ -155,19 +158,17 @@ pub fn App() -> impl IntoView {
     create_effect(move |_| {
         let read_save_path = read_save_path();
         spawn_local(async move {
-            original.set(Some(
-                Inter::load_file(Some(read_save_path.into())).await.0,
-            ));
+            original.set(Some(Inter::load_file(Some(read_save_path.into())).await.0));
         });
     });
     view! {
         <Vertical
-            class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none] px-24 pb-4"
+            class="h-full text-text bg-background caret-caret [&_*]:[font-synthesis:none] [&_*]:[font-variant-ligatures:none] px-80 pb-4"
             gap=6
         >
             <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-12" />
             <textarea
-                class="pt-20 text-sm whitespace-pre-wrap bg-transparent outline-none resize-none size-full selection:bg-darkbrown"
+                class="pt-20 text-sm whitespace-pre-wrap bg-transparent outline-none resize-none pb-80 grow selection:bg-highlight"
                 prop:value=text
                 autocorrect="off"
                 on:input=move |event| {
@@ -275,6 +276,11 @@ fn StatusBar() -> impl IntoView {
     });
     let shortcuts = [
         shortcut!(
+            c-'f';
+            "Find" => {
+            }
+        ),
+        shortcut!(
             c-'n';
             "New" => {
                 text.set(String::new());
@@ -333,53 +339,129 @@ fn StatusBar() -> impl IntoView {
             action(());
         }
     });
+
+    let find_text = create_rw_signal(String::new());
+    let matches = create_rw_signal(Vec::new());
+    let current_match_index = create_rw_signal(0);
+    let show_find_input = create_rw_signal(false);
+
+    let find_matches = move || {
+        let mut new_matches = Vec::new();
+        let mut start_index = 0;
+
+        while let Some(index) = text.get_untracked()[start_index..].find(&find_text.get_untracked())
+        {
+            new_matches.push(start_index + index);
+            start_index += index + find_text.get_untracked().len();
+        }
+
+        matches.set(new_matches);
+        current_match_index.set(0);
+    };
+
+    let move_to_next_match = move || {
+        if matches.get_untracked().is_empty() {
+            return;
+        }
+        let next_index = (current_match_index.get_untracked() + 1) % matches.get_untracked().len();
+        current_match_index.set(next_index);
+    };
+
+    window_event_listener(keydown, move |event| {
+        if event.meta_key() && event.key() == "f" {
+            show_find_input.set(true);
+            find_text.set(String::new());
+            matches.set(Vec::new());
+            current_match_index.set(0);
+            event.prevent_default();
+        } else if event.key() == "Escape" && show_find_input.get() {
+            show_find_input.set(false);
+            find_text.set(String::new());
+            matches.set(Vec::new());
+            current_match_index.set(0);
+        }
+    });
+
     view! {
-        <div class="text-xs text-right select-none text-fade">
+        <div class="text-xs text-right cursor-default select-none text-fade">
             <Horizontal class="justify-between">
                 <div class="h-6">
-                    <div class="absolute transition" class=("opacity-0", command_pressed)>
-                        <Horizontal gap=1>
-                            {move || {
-                                let path = PathBuf::from(read_save_path());
-                                let mut components = path.components();
-                                let mut components: [_; 4] = from_fn(|_| {
-                                    components.next_back()
-                                });
-                                components.reverse();
-                                components
-                                    .into_iter()
-                                    .flatten()
-                                    .collect::<PathBuf>()
-                                    .to_string_lossy()
-                                    .to_string()
-                            }} <Show when=unsaved>
-                                <div class="text-white">"*"</div>
-                            </Show>
-                        </Horizontal>
-                    </div>
-                    <div
-                        class="absolute transition"
-                        class=("opacity-0", move || !command_pressed())
-                    >
-                        <Horizontal gap=2>
-                            {shortcuts
-                                .into_iter()
-                                .map(|Shortcut { shift, char, name, action }| {
-                                    let char = char.to_ascii_uppercase();
-                                    view! {
-                                        <button on:click=move |_| action(())>
-                                            <Horizontal gap=2 class="transition hover:brightness-150">
-                                                <div>
-                                                    {format!("c-{}{char}", if shift { "sh-" } else { "" })}
-                                                </div>
-                                                <div class="text-red">{name}</div>
-                                            </Horizontal>
-                                        </button>
-                                    }
-                                })
-                                .collect_view()}
-                        </Horizontal>
-                    </div>
+                    <Match cases=[
+                        (
+                            (move |()| command_pressed()).into(),
+                            (move || {
+                                view! {
+                                    <Horizontal gap=2>
+                                        {shortcuts
+                                            .into_iter()
+                                            .map(|Shortcut { shift, char, name, .. }| {
+                                                let char = char.to_ascii_uppercase();
+                                                view! {
+                                                    <Horizontal gap=2>
+                                                        <div>
+                                                            {format!("c-{}{char}", if shift { "sh-" } else { "" })}
+                                                        </div>
+                                                        <div class="text-accent">{name}</div>
+                                                    </Horizontal>
+                                                }
+                                            })
+                                            .collect_view()}
+                                    </Horizontal>
+                                }
+                            })
+                                .into(),
+                        ),
+                        (
+                            (move |()| show_find_input()).into(),
+                            (move || {
+                                view! {
+                                    <Horizontal gap=1>
+                                        <div class="text-text">"find:"</div>
+                                        <input
+                                            type="text"
+                                            class="select-text text-text bg-background cursor-text selection:bg-highlight"
+                                            prop:value=find_text
+                                            on:input=move |_| {
+                                                find_matches();
+                                            }
+                                            on:keydown=move |event| {
+                                                if event.key() == "Enter" {
+                                                    move_to_next_match();
+                                                }
+                                            }
+                                        />
+                                    </Horizontal>
+                                }
+                            })
+                                .into(),
+                        ),
+                        (
+                            (move |()| !show_find_input()).into(),
+                            (move || {
+                                view! {
+                                    <Horizontal gap=1>
+                                        {move || {
+                                            let path = PathBuf::from(read_save_path());
+                                            let mut components = path.components();
+                                            let mut components: [_; 4] = from_fn(|_| {
+                                                components.next_back()
+                                            });
+                                            components.reverse();
+                                            components
+                                                .into_iter()
+                                                .flatten()
+                                                .collect::<PathBuf>()
+                                                .to_string_lossy()
+                                                .to_string()
+                                        }} <Show when=unsaved>
+                                            <div class="text-text">"*"</div>
+                                        </Show>
+                                    </Horizontal>
+                                }
+                            })
+                                .into(),
+                        ),
+                    ] />
                 </div>
                 <Show when=move || { !text().is_empty() } fallback=|| view! { <div /> }>
                     {move || {
@@ -440,4 +522,22 @@ pub fn class_to_string(class: Option<AttributeValue>) -> String {
         })
         .unwrap_or_default()
         .to_string()
+}
+
+#[component]
+fn Match<const N: usize>(
+    #[prop(into)] cases: [(Callback<(), bool>, ViewFn); N],
+) -> impl IntoView {
+    view! {
+        {cases
+            .into_iter()
+            .map(|(condition, view)| {
+                view! {
+                    <div class="absolute transition" class=("opacity-0", move || !condition(()))>
+                        {view.run()}
+                    </div>
+                }
+            })
+            .collect_view()}
+    }
 }
