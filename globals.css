@@ -4,7 +4,7 @@
 
 @font-face {
     font-family: "Mono";
-    src: url('/fonts/mono.ttf');
+    src: url('/fonts/dejavu.ttf');
 }
 
 @layer base {
