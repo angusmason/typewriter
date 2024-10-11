@@ -11,7 +11,7 @@ use serde::Serialize;
 use console_error_panic_hook::set_once;
 use leptos::ev::{keydown, keyup};
 use leptos::{
-    component, create_action, create_effect, create_rw_signal, event_target, event_target_value, provide_context, spawn_local, use_context, window_event_listener, Action, AttributeValue, Callback, Children, CollectView, IntoView, RwSignal, Show, Signal, SignalGetUntracked, SignalSet, SignalUpdate, WriteSignal
+    component, create_action, create_effect, create_rw_signal, event_target, event_target_value, provide_context, spawn_local, use_context, window_event_listener, Action, AttributeValue, Callback, Children, CollectView, IntoView, RwSignal, Show, Signal, SignalGet, SignalGetUntracked, SignalSet, SignalUpdate, WriteSignal
 };
 use leptos::{mount_to_body, view};
 use leptos_use::storage::use_local_storage;
@@ -159,7 +159,7 @@ pub fn App() -> impl IntoView {
     });
     view! {
         <Vertical
-            class="h-full text-white bg-brown caret-white [&_*]:[font-synthesis:none] px-24 pb-4"
+            class="h-full text-white bg-brown caret-red [&_*]:[font-synthesis:none] px-24 pb-4"
             gap=6
         >
             <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-12" />
@@ -272,6 +272,11 @@ fn StatusBar() -> impl IntoView {
     });
     let shortcuts = [
         shortcut!(
+            c-'f';
+            "Find" => {
+            }
+        ),
+        shortcut!(
             c-'n';
             "New" => {
                 text.set(String::new());
@@ -330,20 +335,82 @@ fn StatusBar() -> impl IntoView {
             action(());
         }
     });
+
+    let find_text = create_rw_signal(String::new());
+    let matches = create_rw_signal(Vec::new());
+    let current_match_index = create_rw_signal(0);
+    let show_find_input = create_rw_signal(false); // State to control visibility
+
+    let find_matches = move || {
+        let mut new_matches = Vec::new();
+        let mut start_index = 0;
+
+        while let Some(index) = text.get_untracked()[start_index..].find(&find_text.get_untracked()) {
+            new_matches.push(start_index + index);
+            start_index += index + find_text.get_untracked().len();
+        }
+
+        matches.set(new_matches);
+        current_match_index.set(0);
+    };
+
+    let move_to_next_match = move || {
+        if matches.get_untracked().is_empty() {
+            return;
+        }
+        let next_index = (current_match_index.get_untracked() + 1) % matches.get_untracked().len();
+        current_match_index.set(next_index);
+    };
+
+    window_event_listener(keydown, move |event| {
+        if event.meta_key() && event.key() == "f" {
+            show_find_input.set(true);
+            find_text.set(String::new());
+            matches.set(Vec::new());
+            current_match_index.set(0);
+            event.prevent_default();
+        } else if event.key() == "Escape" && show_find_input.get() {
+            show_find_input.set(false);
+            find_text.set(String::new());
+            matches.set(Vec::new());
+            current_match_index.set(0);
+        }
+    });
+
     view! {
         <div class="text-xs text-right select-none text-fade">
             <Horizontal class="justify-between">
                 <div class="h-6">
-                    <div class="absolute transition" class=("opacity-0", command_pressed)>
+                    <div
+                        class="absolute transition"
+                        class=("opacity-0", move || command_pressed() && !show_find_input())
+                    >
                         <Horizontal gap=1>
-                            {read_save_path} <Show when=unsaved>
+                            <Show when=show_find_input>
+                                <div>"find:"</div>
+                                <input
+                                    type="text"
+                                    class="search-input bg-brown transition"
+                                    prop:value=find_text
+                                    on:input=move |_| {
+                                        find_matches();
+                                    }
+                                    on:keydown=move |event| {
+                                        if event.key() == "Enter" {
+                                            move_to_next_match();
+                                        }
+                                    }
+                                />
+                            </Show>
+                            <Show when=move || !show_find_input()>{read_save_path}</Show>
+                            <Show when=unsaved>
                                 <div class="text-white">"*"</div>
                             </Show>
                         </Horizontal>
                     </div>
                     <div
                         class="absolute transition"
-                        class=("opacity-0", move || !command_pressed())
+                        class=("opacity-0", move || !command_pressed() || show_find_input())
                     >
                         <Horizontal gap=2>
                             {shortcuts
@@ -351,14 +418,12 @@ fn StatusBar() -> impl IntoView {
                                 .map(|Shortcut { shift, char, name, action }| {
                                     let char = char.to_ascii_uppercase();
                                     view! {
-                                        <button on:click=move |_| action(())>
-                                            <Horizontal gap=2 class="transition hover:brightness-125">
-                                                <div>
-                                                    {format!("c-{}{char}", if shift { "sh-" } else { "" })}
-                                                </div>
-                                                <div class="text-red">{name}</div>
-                                            </Horizontal>
-                                        </button>
+                                        <Horizontal gap=2>
+                                            <div>
+                                                {format!("c-{}{char}", if shift { "sh-" } else { "" })}
+                                            </div>
+                                            <div class="text-red">{name}</div>
+                                        </Horizontal>
                                     }
                                 })
                                 .collect_view()}
