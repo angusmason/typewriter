@@ -12,10 +12,10 @@ use serde::Serialize;
 use console_error_panic_hook::set_once;
 use leptos::ev::{keydown, keyup};
 use leptos::{
-    component, create_action, create_effect, create_rw_signal, event_target, event_target_value,
-    provide_context, spawn_local, use_context, window_event_listener, Action, AttributeValue,
-    Callback, Children, CollectView, IntoView, RwSignal, Show, Signal, SignalGet,
-    SignalGetUntracked, SignalSet, SignalUpdate, ViewFn, WriteSignal,
+    component, create_action, create_effect, create_memo, create_rw_signal, event_target,
+    event_target_value, provide_context, spawn_local, use_context, window_event_listener, Action,
+    AttributeValue, Callback, Children, CollectView, For, IntoView, RwSignal, Show, Signal,
+    SignalGet, SignalGetUntracked, SignalSet, SignalUpdate, ViewFn, WriteSignal,
 };
 use leptos::{mount_to_body, view};
 use leptos_use::storage::use_local_storage;
@@ -525,19 +525,25 @@ pub fn class_to_string(class: Option<AttributeValue>) -> String {
 }
 
 #[component]
-fn Match<const N: usize>(
-    #[prop(into)] cases: [(Callback<(), bool>, ViewFn); N],
-) -> impl IntoView {
+fn Match<const N: usize>(#[prop(into)] cases: [(Callback<(), bool>, ViewFn); N]) -> impl IntoView {
+    let matched = create_memo({
+        let cases = cases.clone();
+        move |_| cases.iter().position(|(condition, _)| condition(()))
+    });
     view! {
-        {cases
-            .into_iter()
-            .map(|(condition, view)| {
+        <For
+            each=move || cases.clone().into_iter().enumerate()
+            key=move |(index, _)| *index
+            children=move |(index, (_, view))| {
                 view! {
-                    <div class="absolute transition" class=("opacity-0", move || !condition(()))>
+                    <div
+                        class="absolute transition"
+                        class=(["opacity-0", "pointer-events-none"], move || { Some(index) != matched() })
+                    >
                         {view.run()}
                     </div>
                 }
-            })
-            .collect_view()}
+            }
+        />
     }
 }

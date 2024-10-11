@@ -7,7 +7,7 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        'sans': ["Mono"],
+        'sans': ["DejaVu"],
       },
       colors: {
         'background': '#222222',

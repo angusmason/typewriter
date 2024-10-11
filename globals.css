@@ -3,8 +3,24 @@
 @tailwind utilities;
 
 @font-face {
-    font-family: "Mono";
-    src: url('/fonts/mono.ttf');
+    font-family: "DejaVu";
+    src: url('/fonts/dejavu.ttf');
+}
+@font-face {
+    font-family: "DejaVu";
+    src: url('/fonts/dejavu-oblique.ttf');
+    font-style: italic;
+}
+@font-face {
+    font-family: "DejaVu";
+    src: url('/fonts/dejavu-bold.ttf');
+    font-weight: bold;
+}
+@font-face {
+    font-family: "DejaVu";
+    src: url('/fonts/dejavu-bold-oblique.ttf');
+    font-style: italic;
+    font-weight: bold;
 }
 
 @layer base {
