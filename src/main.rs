@@ -159,12 +159,12 @@ pub fn App() -> impl IntoView {
     });
     view! {
         <Vertical
-            class="h-full text-text bg-background caret-caret [&_*]:[font-synthesis:none] px-24 pb-4"
+            class="h-full text-text bg-background caret-caret [&_*]:[font-synthesis:none] px-80 pb-4"
             gap=6
         >
             <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-12" />
             <textarea
-                class="pt-20 text-sm bg-transparent outline-none resize-none grow selection:bg-highlight"
+                class="pt-20 pb-80 text-sm bg-transparent outline-none resize-none grow selection:bg-highlight"
                 prop:value=text
                 autocorrect="off"
                 on:input=move |event| {

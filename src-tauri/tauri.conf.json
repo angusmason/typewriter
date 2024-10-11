@@ -14,10 +14,10 @@
     "windows": [
       {
         "title": "Typewriter",
-        "width": 1080,
-        "minWidth": 675,
-        "height": 740,
-        "minHeight": 462.5,
+        "width": 1450,
+        "minWidth": 1450,
+        "height": 880,
+        "minHeight": 880,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true
       }
