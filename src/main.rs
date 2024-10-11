@@ -159,12 +159,12 @@ pub fn App() -> impl IntoView {
     });
     view! {
         <Vertical
-            class="h-full text-white bg-brown caret-red [&_*]:[font-synthesis:none] px-24 pb-4"
+            class="h-full text-text bg-background caret-accent [&_*]:[font-synthesis:none] px-24 pb-4"
             gap=6
         >
             <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-12" />
             <textarea
-                class="pt-20 text-sm bg-transparent outline-none resize-none grow selection:bg-darkbrown"
+                class="pt-20 text-sm bg-transparent outline-none resize-none grow selection:bg-highlight"
                 prop:value=text
                 autocorrect="off"
                 on:input=move |event| {
@@ -387,10 +387,10 @@ fn StatusBar() -> impl IntoView {
                     >
                         <Horizontal gap=1>
                             <Show when=show_find_input>
-                                <div class="text-white">"find:"</div>
+                                <div class="text-text">"find:"</div>
                                 <input
                                     type="text"
-                                    class="text-white bg-brown transition cursor-text select-text selection:bg-darkbrown"
+                                    class="text-text bg-background transition cursor-text select-text selection:bg-highlight"
                                     prop:value=find_text
                                     on:input=move |_| {
                                         find_matches();
@@ -404,7 +404,7 @@ fn StatusBar() -> impl IntoView {
                             </Show>
                             <Show when=move || !show_find_input()>{read_save_path}</Show>
                             <Show when=unsaved>
-                                <div class="text-white">"*"</div>
+                                <div class="text-text">"*"</div>
                             </Show>
                         </Horizontal>
                     </div>
@@ -422,7 +422,7 @@ fn StatusBar() -> impl IntoView {
                                             <div>
                                                 {format!("c-{}{char}", if shift { "sh-" } else { "" })}
                                             </div>
-                                            <div class="text-red">{name}</div>
+                                            <div class="text-accent">{name}</div>
                                         </Horizontal>
                                     }
                                 })
