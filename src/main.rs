@@ -378,7 +378,7 @@ fn StatusBar() -> impl IntoView {
     });
 
     view! {
-        <div class="text-xs text-right select-none text-fade">
+        <div class="text-xs text-right select-none cursor-default text-fade">
             <Horizontal class="justify-between">
                 <div class="h-6">
                     <div
@@ -390,7 +390,7 @@ fn StatusBar() -> impl IntoView {
                                 <div>"find:"</div>
                                 <input
                                     type="text"
-                                    class="search-input bg-brown transition"
+                                    class="bg-brown transition cursor-text select-text selection:bg-darkbrown"
                                     prop:value=find_text
                                     on:input=move |_| {
                                         find_matches();
