@@ -7,6 +7,10 @@
     src: url('/fonts/dejavu.ttf');
 }
 
+* {
+    font-variant-ligatures: none;
+}
+
 @layer base {
     html, body {
         @apply overflow-hidden;

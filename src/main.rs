@@ -339,7 +339,7 @@ fn StatusBar() -> impl IntoView {
     let find_text = create_rw_signal(String::new());
     let matches = create_rw_signal(Vec::new());
     let current_match_index = create_rw_signal(0);
-    let show_find_input = create_rw_signal(false); // State to control visibility
+    let show_find_input = create_rw_signal(false);
 
     let find_matches = move || {
         let mut new_matches = Vec::new();
