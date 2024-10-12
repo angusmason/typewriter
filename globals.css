@@ -5,15 +5,19 @@
 @font-face {
     font-family: "DejaVu";
     src: url('/fonts/dejavu.ttf');
+    font-style: normal;
+    font-weight: normal;
 }
 @font-face {
     font-family: "DejaVu";
     src: url('/fonts/dejavu-oblique.ttf');
     font-style: italic;
+    font-weight: normal;
 }
 @font-face {
     font-family: "DejaVu";
     src: url('/fonts/dejavu-bold.ttf');
+    font-style: normal;
     font-weight: bold;
 }
 @font-face {

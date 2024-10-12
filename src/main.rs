@@ -6,16 +6,18 @@ use std::borrow::Cow;
 use std::path::PathBuf;
 
 use codee::string::FromToStringCodec;
+use leptos::html::Div;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use console_error_panic_hook::set_once;
 use leptos::ev::{keydown, keyup};
 use leptos::{
-    component, create_action, create_effect, create_memo, create_rw_signal, event_target,
-    event_target_value, provide_context, spawn_local, use_context, window_event_listener, Action,
-    AttributeValue, Callback, Children, CollectView, For, IntoView, RwSignal, Show, Signal,
-    SignalGet, SignalGetUntracked, SignalSet, SignalUpdate, ViewFn, WriteSignal,
+    component, create_action, create_effect, create_memo, create_node_ref, create_rw_signal,
+    event_target, event_target_value, provide_context, spawn_local, use_context,
+    window_event_listener, Action, AttributeValue, Callback, Children, CollectView, For,
+    HtmlElement, IntoView, RwSignal, Show, Signal, SignalGetUntracked, SignalSet, SignalUpdate,
+    ViewFn, WriteSignal,
 };
 use leptos::{mount_to_body, view};
 use leptos_use::storage::use_local_storage;
@@ -161,58 +163,170 @@ pub fn App() -> impl IntoView {
             original.set(Some(Inter::load_file(Some(read_save_path.into())).await.0));
         });
     });
+    let overlay = create_node_ref();
+    let sync = move |event| {
+        let overlay: HtmlElement<Div> = overlay().unwrap();
+        let text_area = event_target::<HtmlTextAreaElement>(&event);
+        overlay.set_scroll_top(text_area.scroll_top());
+    };
     view! {
         <Vertical
             class="h-full text-text bg-background caret-caret [&_*]:[font-synthesis:none] [&_*]:[font-variant-ligatures:none] px-80 pb-4"
             gap=6
         >
             <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-12" />
-            <textarea
-                class="pt-20 text-sm whitespace-pre-wrap bg-transparent outline-none resize-none pb-80 grow selection:bg-highlight"
-                prop:value=text
-                autocorrect="off"
-                on:input=move |event| {
-                    text.set(event_target_value(&event));
-                    spawn_local(async move {
-                        unsaved
-                            .set(original.get_untracked().flatten() != Some(text.get_untracked()));
-                    });
-                }
-                on:select=move |event| {
-                    let text_area: HtmlTextAreaElement = event_target(&event);
-                    selection
-                        .set(
-                            Some((
-                                text_area.selection_start().unwrap().unwrap() as usize,
-                                text_area.selection_end().unwrap().unwrap() as usize,
-                            )),
-                        );
-                }
-                on:mousedown=move |_| {
-                    selection.set(None);
-                }
-                on:keydown=move |event| {
-                    if event.key() == "Tab" {
-                        event.prevent_default();
-                        let text_area = event_target::<HtmlTextAreaElement>(&event);
-                        let selection = selection
-                            .get_untracked()
-                            .unwrap_or_else(|| (
-                                text_area.selection_start().unwrap().unwrap() as usize,
-                                text_area.selection_end().unwrap().unwrap() as usize,
-                            ));
-                        text.update(|text| {
-                            *text = format!("{}\t{}", &text[0..selection.0], &text[selection.1..]);
+            <div class="relative size-full">
+                <div
+                    class="absolute top-0 left-0 pt-20 overflow-y-auto text-sm break-words whitespace-pre-wrap size-full"
+                    ref=overlay
+                >
+                    <div class="relative size-full">
+                        <div class="absolute top-0 size-full">
+                            {move || {
+                                const fn position(
+                                    lengths: &[usize],
+                                    index: usize,
+                                ) -> (usize, usize) {
+                                    let mut low = 0;
+                                    let mut high = lengths.len();
+                                    while low < high {
+                                        let mid = (low + high) / 2;
+                                        if index < lengths[mid] {
+                                            high = mid;
+                                        } else {
+                                            low = mid + 1;
+                                        }
+                                    }
+                                    (low - 1, index - lengths[low - 1])
+                                }
+                                let char_to_position = move |char: usize| {
+                                    let mut first = 0;
+                                    let mut last = 0;
+                                    for (index, line) in text().lines().enumerate() {
+                                        last += line.len();
+                                        if last == char {
+                                            return (index, last - first)
+                                        } else if char.max(last) == char {
+                                            last += 1;
+                                            first = last;
+                                        } else {
+                                            return (index, char - first)
+                                        }
+                                    }
+                                    unreachable!()
+                                };
+                                let (start, end) = selection()
+                                    .map(|(start, end)| (
+                                        char_to_position(start),
+                                        char_to_position(end),
+                                    ))?;
+                                dbg!(start, end);
+                                Some(
+                                    text()
+                                        .lines()
+                                        .enumerate()
+                                        .map(|(index, line)| {
+                                            let len = line.len();
+                                            view! {
+                                                <div
+                                                    class="h-5"
+                                                    style:padding-left=move || {
+                                                        format!("{}ch", if start.0 == index { start.1 } else { 0 })
+                                                    }
+                                                >
+                                                    <div
+                                                        class="h-full bg-highlight"
+                                                        style:width=move || {
+                                                            format!(
+                                                                "{}ch",
+                                                                if start.0 == end.0 {
+                                                                    if start.0 == index { end.1 - start.1 } else { 0 }
+                                                                } else if index > start.0 && index < end.0 {
+                                                                    len
+                                                                } else if index == start.0 {
+                                                                    len - start.1
+                                                                } else if index == end.0 {
+                                                                    end.1
+                                                                } else {
+                                                                    0
+                                                                },
+                                                            )
+                                                        }
+                                                    ></div>
+                                                </div>
+                                            }
+                                        })
+                                        .collect_view(),
+                                )
+                            }}
+                        </div>
+                        <div class="absolute top-0 z-10 size-full">
+                            {move || {
+                                let text = text();
+                                text.lines()
+                                    .map(|line| {
+                                        view! { <div class="h-5">{line.to_string()}</div> }
+                                    })
+                                    .collect_view()
+                            }}
+                        </div>
+                    </div>
+                </div>
+                <textarea
+                    class="absolute top-0 left-0 z-20 pt-20 overflow-y-auto text-sm text-transparent whitespace-pre-wrap bg-transparent outline-none resize-none size-full overscroll-none selection:bg-transparent"
+                    prop:value=text
+                    autocorrect="off"
+                    on:input=move |event| {
+                        text.set(event_target_value(&event));
+                        spawn_local(async move {
+                            unsaved
+                                .set(
+                                    original.get_untracked().flatten() != Some(text.get_untracked()),
+                                );
                         });
-                        let position = selection.0 + 1;
-                        #[allow(clippy::cast_possible_truncation)]
-                        {
-                            text_area.set_selection_start(Some(position as u32)).unwrap();
-                            text_area.set_selection_end(Some(position as u32)).unwrap();
+                        sync(event);
+                    }
+                    on:select=move |event| {
+                        let text_area: HtmlTextAreaElement = event_target(&event);
+                        selection
+                            .set(
+                                Some((
+                                    text_area.selection_start().unwrap().unwrap() as usize,
+                                    text_area.selection_end().unwrap().unwrap() as usize,
+                                )),
+                            );
+                    }
+                    on:mousedown=move |_| {
+                        selection.set(None);
+                    }
+                    on:keydown=move |event| {
+                        if event.key() == "Tab" {
+                            event.prevent_default();
+                            let text_area = event_target::<HtmlTextAreaElement>(&event);
+                            let selection = selection
+                                .get_untracked()
+                                .unwrap_or_else(|| (
+                                    text_area.selection_start().unwrap().unwrap() as usize,
+                                    text_area.selection_end().unwrap().unwrap() as usize,
+                                ));
+                            text.update(|text| {
+                                *text = format!(
+                                    "{}\t{}",
+                                    &text[0..selection.0],
+                                    &text[selection.1..],
+                                );
+                            });
+                            let position = selection.0 + 1;
+                            #[allow(clippy::cast_possible_truncation)]
+                            {
+                                text_area.set_selection_start(Some(position as u32)).unwrap();
+                                text_area.set_selection_end(Some(position as u32)).unwrap();
+                            }
                         }
                     }
-                }
-            />
+                    on:scroll=sync
+                />
+            </div>
             <StatusBar />
         </Vertical>
     }
@@ -274,10 +388,20 @@ fn StatusBar() -> impl IntoView {
     window_event_listener(keyup, move |_| {
         command_pressed.set(false);
     });
+
+    let find_text = create_rw_signal(String::new());
+    let matches = create_rw_signal(Vec::new());
+    let current_match_index = create_rw_signal(0);
+    let show_find_input = create_rw_signal(false);
+
     let shortcuts = [
         shortcut!(
             c-'f';
             "Find" => {
+                show_find_input.set(true);
+                find_text.set(String::new());
+                matches.set(Vec::new());
+                current_match_index.set(0);
             }
         ),
         shortcut!(
@@ -336,14 +460,10 @@ fn StatusBar() -> impl IntoView {
             if event.key() != char.to_string() {
                 continue;
             }
+            event.prevent_default();
             action(());
         }
     });
-
-    let find_text = create_rw_signal(String::new());
-    let matches = create_rw_signal(Vec::new());
-    let current_match_index = create_rw_signal(0);
-    let show_find_input = create_rw_signal(false);
 
     let find_matches = move || {
         let mut new_matches = Vec::new();
@@ -368,13 +488,7 @@ fn StatusBar() -> impl IntoView {
     };
 
     window_event_listener(keydown, move |event| {
-        if event.meta_key() && event.key() == "f" {
-            show_find_input.set(true);
-            find_text.set(String::new());
-            matches.set(Vec::new());
-            current_match_index.set(0);
-            event.prevent_default();
-        } else if event.key() == "Escape" && show_find_input.get() {
+        if event.key() == "Escape" && show_find_input() {
             show_find_input.set(false);
             find_text.set(String::new());
             matches.set(Vec::new());
@@ -538,7 +652,10 @@ fn Match<const N: usize>(#[prop(into)] cases: [(Callback<(), bool>, ViewFn); N])
                 view! {
                     <div
                         class="absolute transition"
-                        class=(["opacity-0", "pointer-events-none"], move || { Some(index) != matched() })
+                        class=(
+                            ["opacity-0", "pointer-events-none"],
+                            move || { Some(index) != matched() },
+                        )
                     >
                         {view.run()}
                     </div>
