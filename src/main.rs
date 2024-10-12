@@ -205,21 +205,21 @@ pub fn App() -> impl IntoView {
                                     for (index, line) in text().lines().enumerate() {
                                         last += line.len();
                                         if last == char {
-                                            return (index, last - first)
+                                            return Some((index, last - first))
                                         } else if char.max(last) == char {
                                             last += 1;
                                             first = last;
                                         } else {
-                                            return (index, char - first)
+                                            return Some((index, char - first))
                                         }
                                     }
-                                    unreachable!()
+                                   None
                                 };
                                 let (start, end) = selection()
-                                    .map(|(start, end)| (
-                                        char_to_position(start),
-                                        char_to_position(end),
-                                    ))?;
+                                    .and_then(|(start, end)| Some((
+                                        char_to_position(start)?,
+                                        char_to_position(end)?,
+                                    )))?;
                                 Some(
                                     text()
                                         .lines()
@@ -306,6 +306,7 @@ pub fn App() -> impl IntoView {
                         selection.set(None);
                     }
                     on:keydown=move |event| {
+                        selection.set(None);
                         if event.key() == "Tab" {
                             event.prevent_default();
                             let text_area = event_target::<HtmlTextAreaElement>(&event);
