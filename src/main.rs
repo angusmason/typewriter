@@ -6,6 +6,7 @@ use std::borrow::Cow;
 use std::path::PathBuf;
 
 use codee::string::FromToStringCodec;
+use itertools::Itertools;
 use leptos::html::Div;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -13,7 +14,11 @@ use serde::Serialize;
 use console_error_panic_hook::set_once;
 use leptos::ev::{keydown, keyup};
 use leptos::{
-    component, create_action, create_effect, create_memo, create_node_ref, create_rw_signal, event_target, event_target_value, provide_context, spawn_local, use_context, window_event_listener, Action, AttributeValue, Callback, Children, CollectView, For, HtmlElement, IntoView, NodeRef, RwSignal, Show, Signal, SignalGetUntracked, SignalSet, SignalUpdate, ViewFn, WriteSignal
+    component, create_action, create_effect, create_memo, create_node_ref, create_rw_signal,
+    event_target, event_target_value, provide_context, spawn_local, use_context,
+    window_event_listener, Action, AttributeValue, Callback, Children, CollectView, For,
+    HtmlElement, IntoView, NodeRef, RwSignal, Show, Signal, SignalGetUntracked, SignalSet,
+    SignalUpdate, ViewFn, WriteSignal,
 };
 use leptos::{mount_to_body, view};
 use leptos_use::storage::use_local_storage;
@@ -174,7 +179,7 @@ pub fn App() -> impl IntoView {
             <div class="relative size-full">
                 <Overlay overlay=overlay />
                 <textarea
-                    class="absolute top-0 left-0 z-20 pt-20 overflow-y-auto text-sm text-transparent whitespace-pre-wrap bg-transparent outline-none resize-none size-full overscroll-none selection:bg-transparent"
+                    class="absolute top-0 left-0 z-20 pt-20 overflow-y-auto text-sm text-transparent break-all whitespace-pre-wrap bg-transparent outline-none resize-none size-full overscroll-none selection:bg-transparent"
                     prop:value=text
                     autocorrect="off"
                     on:input=move |event| {
@@ -235,11 +240,42 @@ pub fn App() -> impl IntoView {
 }
 
 #[component]
-fn Overlay(overlay: NodeRef<Div>) -> impl IntoView  {
-    let Context { text, selection, .. } = use_context().unwrap();
+#[allow(clippy::too_many_lines)]
+fn Overlay(overlay: NodeRef<Div>) -> impl IntoView {
+    let Context {
+        text, selection, ..
+    } = use_context().unwrap();
+    let char: NodeRef<Div> = create_node_ref();
+    let chars_per_line = move || {
+        overlay().unwrap().get_bounding_client_rect().width()
+            / char().unwrap().get_bounding_client_rect().width()
+    };
+    let wrapped_lengths = move || {
+        text()
+            .lines()
+            .flat_map(|line| {
+                if line.is_empty() {
+                    return vec![(true, 0)];
+                }
+                #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+                let chunks = line.chars().chunks(chars_per_line() as usize);
+                let count = chunks.clone().into_iter().count();
+                chunks
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, line)| {
+                        (index == count - 1, line.count())
+                    })
+                    .collect_vec()
+            })
+            .collect_vec()
+    };
     view! {
+        <div class="invisible inline text-sm" ref=char>
+            "h"
+        </div>
         <div
-            class="absolute top-0 left-0 pt-20 overflow-y-auto text-sm break-words whitespace-pre-wrap size-full"
+            class="absolute top-0 left-0 pt-20 overflow-y-auto text-sm break-all whitespace-pre-wrap size-full"
             ref=overlay
         >
             <div class="relative size-full">
@@ -248,8 +284,14 @@ fn Overlay(overlay: NodeRef<Div>) -> impl IntoView  {
                         let char_to_position = move |char: usize| {
                             let mut first = 0;
                             let mut last = 0;
-                            for (index, line) in text().lines().enumerate() {
-                                last += line.len();
+                            for (index, (last_in_chunk, length)) in wrapped_lengths()
+                                .into_iter()
+                                .enumerate()
+                            {
+                                last += length;
+                                if !last_in_chunk {
+                                    last -= 1;
+                                }
                                 if last == char {
                                     return Some((index, last - first))
                                 } else if char.max(last) == char {
@@ -267,11 +309,10 @@ fn Overlay(overlay: NodeRef<Div>) -> impl IntoView  {
                                 char_to_position(end)?,
                             )))?;
                         Some(
-                            text()
-                                .lines()
+                            wrapped_lengths()
+                                .into_iter()
                                 .enumerate()
-                                .map(|(index, line)| {
-                                    let len = line.len();
+                                .map(|(index, (_, length))| {
                                     view! {
                                         <div
                                             class="h-5"
@@ -279,32 +320,25 @@ fn Overlay(overlay: NodeRef<Div>) -> impl IntoView  {
                                                 format!("{}ch", if start.0 == index { start.1 } else { 0 })
                                             }
                                         >
-                                            <Horizontal class="h-full">
-                                                <div
-                                                    class="h-full rounded bg-highlight"
-                                                    style:width=move || {
-                                                        format!(
-                                                            "{}ch",
-                                                            if start.0 == end.0 {
-                                                                if start.0 == index { end.1 - start.1 } else { 0 }
-                                                            } else if index > start.0 && index < end.0 {
-                                                                len
-                                                            } else if index == start.0 {
-                                                                len - start.1
-                                                            } else if index == end.0 {
-                                                                end.1
-                                                            } else {
-                                                                0
-                                                            },
-                                                        )
-                                                    }
-                                                ></div>
-                                                <Show when=move || {
-                                                    (start.0 == end.0 && start.0 == index) || index == end.0
-                                                }>
-                                                    <div class="h-full bg-caret w-0.5"></div>
-                                                </Show>
-                                            </Horizontal>
+                                            <div
+                                                class="h-full rounded bg-highlight"
+                                                style:width=move || {
+                                                    format!(
+                                                        "{}ch",
+                                                        if start.0 == end.0 {
+                                                            if start.0 == index { end.1 - start.1 } else { 0 }
+                                                        } else if index > start.0 && index < end.0 {
+                                                            length
+                                                        } else if index == start.0 {
+                                                            length - start.1
+                                                        } else if index == end.0 {
+                                                            end.1
+                                                        } else {
+                                                            0
+                                                        },
+                                                    )
+                                                }
+                                            ></div>
                                         </div>
                                     }
                                 })
@@ -317,7 +351,15 @@ fn Overlay(overlay: NodeRef<Div>) -> impl IntoView  {
                         let text = text();
                         text.lines()
                             .map(|line| {
-                                view! { <div class="h-5">{line.to_string()}</div> }
+                                view! {
+                                    <div>
+                                        {if line.is_empty() {
+                                            " ".to_string()
+                                        } else {
+                                            line.to_string()
+                                        }}
+                                    </div>
+                                }
                             })
                             .collect_view()
                     }}

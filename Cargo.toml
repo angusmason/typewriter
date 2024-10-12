@@ -16,6 +16,7 @@ unicode-segmentation = "1.12.0"
 web-sys = { version = "0.3.70", features = ["Storage"] }
 leptos-use = { version = "0.13.5", features = ["storage"] }
 codee = "0.2.0"
+itertools = "0.13.0"
 
 [workspace]
 members = ["src-tauri"]
