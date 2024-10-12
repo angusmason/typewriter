@@ -220,7 +220,6 @@ pub fn App() -> impl IntoView {
                                         char_to_position(start),
                                         char_to_position(end),
                                     ))?;
-                                dbg!(start, end);
                                 Some(
                                     text()
                                         .lines()
@@ -234,25 +233,32 @@ pub fn App() -> impl IntoView {
                                                         format!("{}ch", if start.0 == index { start.1 } else { 0 })
                                                     }
                                                 >
-                                                    <div
-                                                        class="h-full bg-highlight"
-                                                        style:width=move || {
-                                                            format!(
-                                                                "{}ch",
-                                                                if start.0 == end.0 {
-                                                                    if start.0 == index { end.1 - start.1 } else { 0 }
-                                                                } else if index > start.0 && index < end.0 {
-                                                                    len
-                                                                } else if index == start.0 {
-                                                                    len - start.1
-                                                                } else if index == end.0 {
-                                                                    end.1
-                                                                } else {
-                                                                    0
-                                                                },
-                                                            )
-                                                        }
-                                                    ></div>
+                                                    <Horizontal class="h-full">
+                                                        <div
+                                                            class="h-full bg-highlight"
+                                                            style:width=move || {
+                                                                format!(
+                                                                    "{}ch",
+                                                                    if start.0 == end.0 {
+                                                                        if start.0 == index { end.1 - start.1 } else { 0 }
+                                                                    } else if index > start.0 && index < end.0 {
+                                                                        len
+                                                                    } else if index == start.0 {
+                                                                        len - start.1
+                                                                    } else if index == end.0 {
+                                                                        end.1
+                                                                    } else {
+                                                                        0
+                                                                    },
+                                                                )
+                                                            }
+                                                        ></div>
+                                                        <Show when=move || {
+                                                            (start.0 == end.0 && start.0 == index) || index == end.0
+                                                        }>
+                                                            <div class="h-full bg-white w-0.5"></div>
+                                                        </Show>
+                                                    </Horizontal>
                                                 </div>
                                             }
                                         })
