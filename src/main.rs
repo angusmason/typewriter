@@ -235,7 +235,7 @@ pub fn App() -> impl IntoView {
                                                 >
                                                     <Horizontal class="h-full">
                                                         <div
-                                                            class="h-full bg-highlight"
+                                                            class="h-full rounded bg-highlight"
                                                             style:width=move || {
                                                                 format!(
                                                                     "{}ch",
@@ -256,7 +256,7 @@ pub fn App() -> impl IntoView {
                                                         <Show when=move || {
                                                             (start.0 == end.0 && start.0 == index) || index == end.0
                                                         }>
-                                                            <div class="h-full bg-white w-0.5"></div>
+                                                            <div class="h-full bg-caret w-0.5"></div>
                                                         </Show>
                                                     </Horizontal>
                                                 </div>
