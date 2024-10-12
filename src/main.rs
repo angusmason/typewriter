@@ -13,11 +13,7 @@ use serde::Serialize;
 use console_error_panic_hook::set_once;
 use leptos::ev::{keydown, keyup};
 use leptos::{
-    component, create_action, create_effect, create_memo, create_node_ref, create_rw_signal,
-    event_target, event_target_value, provide_context, spawn_local, use_context,
-    window_event_listener, Action, AttributeValue, Callback, Children, CollectView, For,
-    HtmlElement, IntoView, RwSignal, Show, Signal, SignalGetUntracked, SignalSet, SignalUpdate,
-    ViewFn, WriteSignal,
+    component, create_action, create_effect, create_memo, create_node_ref, create_rw_signal, event_target, event_target_value, provide_context, spawn_local, use_context, window_event_listener, Action, AttributeValue, Callback, Children, CollectView, For, HtmlElement, IntoView, NodeRef, RwSignal, Show, Signal, SignalGetUntracked, SignalSet, SignalUpdate, ViewFn, WriteSignal
 };
 use leptos::{mount_to_body, view};
 use leptos_use::storage::use_local_storage;
@@ -176,108 +172,7 @@ pub fn App() -> impl IntoView {
         >
             <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-12" />
             <div class="relative size-full">
-                <div
-                    class="absolute top-0 left-0 pt-20 overflow-y-auto text-sm break-words whitespace-pre-wrap size-full"
-                    ref=overlay
-                >
-                    <div class="relative size-full">
-                        <div class="absolute top-0 size-full">
-                            {move || {
-                                const fn position(
-                                    lengths: &[usize],
-                                    index: usize,
-                                ) -> (usize, usize) {
-                                    let mut low = 0;
-                                    let mut high = lengths.len();
-                                    while low < high {
-                                        let mid = (low + high) / 2;
-                                        if index < lengths[mid] {
-                                            high = mid;
-                                        } else {
-                                            low = mid + 1;
-                                        }
-                                    }
-                                    (low - 1, index - lengths[low - 1])
-                                }
-                                let char_to_position = move |char: usize| {
-                                    let mut first = 0;
-                                    let mut last = 0;
-                                    for (index, line) in text().lines().enumerate() {
-                                        last += line.len();
-                                        if last == char {
-                                            return Some((index, last - first))
-                                        } else if char.max(last) == char {
-                                            last += 1;
-                                            first = last;
-                                        } else {
-                                            return Some((index, char - first))
-                                        }
-                                    }
-                                   None
-                                };
-                                let (start, end) = selection()
-                                    .and_then(|(start, end)| Some((
-                                        char_to_position(start)?,
-                                        char_to_position(end)?,
-                                    )))?;
-                                Some(
-                                    text()
-                                        .lines()
-                                        .enumerate()
-                                        .map(|(index, line)| {
-                                            let len = line.len();
-                                            view! {
-                                                <div
-                                                    class="h-5"
-                                                    style:padding-left=move || {
-                                                        format!("{}ch", if start.0 == index { start.1 } else { 0 })
-                                                    }
-                                                >
-                                                    <Horizontal class="h-full">
-                                                        <div
-                                                            class="h-full rounded bg-highlight"
-                                                            style:width=move || {
-                                                                format!(
-                                                                    "{}ch",
-                                                                    if start.0 == end.0 {
-                                                                        if start.0 == index { end.1 - start.1 } else { 0 }
-                                                                    } else if index > start.0 && index < end.0 {
-                                                                        len
-                                                                    } else if index == start.0 {
-                                                                        len - start.1
-                                                                    } else if index == end.0 {
-                                                                        end.1
-                                                                    } else {
-                                                                        0
-                                                                    },
-                                                                )
-                                                            }
-                                                        ></div>
-                                                        <Show when=move || {
-                                                            (start.0 == end.0 && start.0 == index) || index == end.0
-                                                        }>
-                                                            <div class="h-full bg-caret w-0.5"></div>
-                                                        </Show>
-                                                    </Horizontal>
-                                                </div>
-                                            }
-                                        })
-                                        .collect_view(),
-                                )
-                            }}
-                        </div>
-                        <div class="absolute top-0 z-10 size-full">
-                            {move || {
-                                let text = text();
-                                text.lines()
-                                    .map(|line| {
-                                        view! { <div class="h-5">{line.to_string()}</div> }
-                                    })
-                                    .collect_view()
-                            }}
-                        </div>
-                    </div>
-                </div>
+                <Overlay overlay=overlay />
                 <textarea
                     class="absolute top-0 left-0 z-20 pt-20 overflow-y-auto text-sm text-transparent whitespace-pre-wrap bg-transparent outline-none resize-none size-full overscroll-none selection:bg-transparent"
                     prop:value=text
@@ -339,6 +234,98 @@ pub fn App() -> impl IntoView {
     }
 }
 
+#[component]
+fn Overlay(overlay: NodeRef<Div>) -> impl IntoView  {
+    let Context { text, selection, .. } = use_context().unwrap();
+    view! {
+        <div
+            class="absolute top-0 left-0 pt-20 overflow-y-auto text-sm break-words whitespace-pre-wrap size-full"
+            ref=overlay
+        >
+            <div class="relative size-full">
+                <div class="absolute top-0 size-full">
+                    {move || {
+                        let char_to_position = move |char: usize| {
+                            let mut first = 0;
+                            let mut last = 0;
+                            for (index, line) in text().lines().enumerate() {
+                                last += line.len();
+                                if last == char {
+                                    return Some((index, last - first))
+                                } else if char.max(last) == char {
+                                    last += 1;
+                                    first = last;
+                                } else {
+                                    return Some((index, char - first))
+                                }
+                            }
+                            None
+                        };
+                        let (start, end) = selection()
+                            .and_then(|(start, end)| Some((
+                                char_to_position(start)?,
+                                char_to_position(end)?,
+                            )))?;
+                        Some(
+                            text()
+                                .lines()
+                                .enumerate()
+                                .map(|(index, line)| {
+                                    let len = line.len();
+                                    view! {
+                                        <div
+                                            class="h-5"
+                                            style:padding-left=move || {
+                                                format!("{}ch", if start.0 == index { start.1 } else { 0 })
+                                            }
+                                        >
+                                            <Horizontal class="h-full">
+                                                <div
+                                                    class="h-full rounded bg-highlight"
+                                                    style:width=move || {
+                                                        format!(
+                                                            "{}ch",
+                                                            if start.0 == end.0 {
+                                                                if start.0 == index { end.1 - start.1 } else { 0 }
+                                                            } else if index > start.0 && index < end.0 {
+                                                                len
+                                                            } else if index == start.0 {
+                                                                len - start.1
+                                                            } else if index == end.0 {
+                                                                end.1
+                                                            } else {
+                                                                0
+                                                            },
+                                                        )
+                                                    }
+                                                ></div>
+                                                <Show when=move || {
+                                                    (start.0 == end.0 && start.0 == index) || index == end.0
+                                                }>
+                                                    <div class="h-full bg-caret w-0.5"></div>
+                                                </Show>
+                                            </Horizontal>
+                                        </div>
+                                    }
+                                })
+                                .collect_view(),
+                        )
+                    }}
+                </div>
+                <div class="absolute top-0 z-10 size-full">
+                    {move || {
+                        let text = text();
+                        text.lines()
+                            .map(|line| {
+                                view! { <div class="h-5">{line.to_string()}</div> }
+                            })
+                            .collect_view()
+                    }}
+                </div>
+            </div>
+        </div>
+    }
+}
 #[component]
 #[allow(clippy::too_many_lines)]
 fn StatusBar() -> impl IntoView {
