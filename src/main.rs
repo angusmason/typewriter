@@ -1,6 +1,8 @@
 #![warn(clippy::pedantic, clippy::nursery)]
 #![allow(clippy::must_use_candidate)]
 
+mod document;
+
 use std::array::from_fn;
 use std::borrow::Cow;
 use std::path::PathBuf;
