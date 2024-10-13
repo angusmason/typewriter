@@ -2,8 +2,8 @@ use std::iter::once;
 
 use leptos::html::{div, h1, h2, h3, h4, h5, h6, AnyElement};
 use leptos::{
-    create_effect, create_node_ref, create_rw_signal, provide_context, use_context, view,
-    CollectView, IntoView, NodeRef, RwSignal, SignalUpdate, View,
+    create_effect, create_node_ref, create_rw_signal, provide_context, use_context,
+    view, CollectView, IntoView, NodeRef, RwSignal, SignalUpdate, View,
 };
 use nom::branch::alt;
 use nom::bytes::complete::{is_not, tag, take_until1};
@@ -71,7 +71,7 @@ impl IntoView for Document {
                         view! {
                             <div
                                 style:top=format!("{}px", offset - min)
-                                class="absolute -left-16 w-12 flex justify-end pointer-events-none"
+                                class="absolute flex justify-end w-12 pointer-events-none -left-16"
                             >
                                 {"#".repeat(depth) + " "}
                             </div>
@@ -79,7 +79,8 @@ impl IntoView for Document {
                     })
                     .collect_view()
             }}
-        }.into_view()
+        }
+        .into_view()
     }
 }
 
@@ -94,7 +95,8 @@ impl IntoView for Segment {
                     use_context::<RwSignal<Vec<_>>>()
                         .unwrap()
                         .update(|headings| {
-                            headings.push((heading().unwrap().offset_top(), depth));
+                            #[allow(clippy::cast_possible_truncation)]
+                            headings.push((heading().unwrap().offset_top() as i32, depth));
                         });
                 });
                 view! {
@@ -108,7 +110,7 @@ impl IntoView for Segment {
                         _ => div().into_any(),
                     }
                         .node_ref(heading)
-                        .classes("inline font-bold")
+                        .classes("inline-block font-bold")
                         .child((view! { <div class="inline text-fade">{&hashes}</div> }, segments))}
                 }
                 .into_view()

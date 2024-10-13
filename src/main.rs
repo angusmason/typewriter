@@ -125,7 +125,6 @@ struct Context {
     selection: RwSignal<Option<(usize, usize)>>,
 }
 
-
 pub struct PathBufCodec;
 
 impl Encoder<Option<PathBuf>> for PathBufCodec {
@@ -133,7 +132,12 @@ impl Encoder<Option<PathBuf>> for PathBufCodec {
     type Encoded = String;
 
     fn encode(path: &Option<PathBuf>) -> Result<String, Self::Error> {
-        Ok(path.as_deref().map(Path::to_str).map(Option::unwrap).unwrap_or_default().to_string())
+        Ok(path
+            .as_deref()
+            .map(Path::to_str)
+            .map(Option::unwrap)
+            .unwrap_or_default()
+            .to_string())
     }
 }
 
@@ -161,8 +165,7 @@ pub fn App() -> impl IntoView {
         async move {
             let Some(path) = Inter::save_file(
                 text.get_untracked(),
-                read_save_path.get_untracked()
-                    .filter(|_| !save_as),
+                read_save_path.get_untracked().filter(|_| !save_as),
             )
             .await
             else {
@@ -214,12 +217,8 @@ pub fn App() -> impl IntoView {
                     autocorrect="off"
                     on:input=move |event| {
                         text.set(event_target_value(&event));
-                        spawn_local(async move {
-                            unsaved
-                                .set(
-                                    original.get_untracked().flatten() != Some(text.get_untracked()),
-                                );
-                        });
+                        unsaved
+                            .set(original.get_untracked().flatten() != Some(text.get_untracked()));
                         sync(event);
                     }
                     on:select=move |event| {
@@ -294,9 +293,7 @@ fn Overlay(overlay: NodeRef<Div>) -> impl IntoView {
                 chunks
                     .into_iter()
                     .enumerate()
-                    .map(|(index, line)| {
-                        (index == count - 1, line.count())
-                    })
+                    .map(|(index, line)| (index == count - 1, line.count()))
                     .collect_vec()
             })
             .collect_vec()
@@ -457,9 +454,7 @@ fn StatusBar() -> impl IntoView {
     create_effect(move |_| {
         spawn_local({
             async move {
-                let (Some(data), _) =
-                    Inter::load_file(read_save_path.get_untracked()).await
-                else {
+                let (Some(data), _) = Inter::load_file(read_save_path.get_untracked()).await else {
                     return;
                 };
                 text.set(data);
@@ -639,6 +634,42 @@ fn StatusBar() -> impl IntoView {
                             (move |()| !show_find_input()).into(),
                             (move || {
                                 view! {
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
                                     // prop:value=find_text
                                     // on:input=move |_| {
                                     // find_matches();
