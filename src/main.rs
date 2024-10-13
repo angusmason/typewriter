@@ -211,7 +211,7 @@ pub fn App() -> impl IntoView {
             <div class="relative size-full">
                 <Overlay overlay=overlay />
                 <textarea
-                    class="absolute top-0 left-0 z-20 pt-20 overflow-y-auto text-sm text-transparent break-all whitespace-pre-wrap bg-transparent outline-none resize-none size-full overscroll-none px-80 selection:bg-transparent"
+                    class="absolute top-0 left-0 z-20 pt-20 overflow-y-auto text-sm break-all whitespace-pre-wrap bg-transparent outline-none resize-none size-full overscroll-none px-80 selection:bg-transparent"
                     prop:value=text
                     autocorrect="off"
                     on:input=move |event| {
@@ -382,14 +382,14 @@ fn Overlay(overlay: NodeRef<Div>) -> impl IntoView {
                 </div>
                 <div class="absolute top-0 z-10 size-full">
                     {move || {
-                        let text = text();
-                        let document = match Document::parse(&text) {
+                        let document = match Document::parse(&(text() + " ")) {
                             Ok((remaining, mut document)) => {
                                 document.push(Segment::Text(remaining.to_string()));
                                 document.into_view()
                             }
                             Err(_) => {
-                                text.lines()
+                                text()
+                                    .lines()
                                     .map(|line| {
                                         view! {
                                             <div>
@@ -636,6 +636,24 @@ fn StatusBar() -> impl IntoView {
                             (move |()| !show_find_input()).into(),
                             (move || {
                                 view! {
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
                                     // prop:value=find_text
                                     // on:input=move |_| {
                                     // find_matches();
