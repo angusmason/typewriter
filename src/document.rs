@@ -6,11 +6,11 @@ use leptos::{
     CollectView, IntoView, NodeRef, RwSignal, SignalUpdate, View,
 };
 use nom::branch::alt;
-use nom::bytes::complete::{tag, take_till1, take_until1};
-use nom::character::complete::newline;
+use nom::bytes::complete::{is_not, tag, take_until1};
+use nom::character::complete::{char, newline, one_of};
 use nom::combinator::{map, map_res, rest};
 use nom::multi::{many0, many1, many1_count};
-use nom::sequence::{delimited, separated_pair, tuple};
+use nom::sequence::{delimited, preceded, separated_pair, tuple};
 use nom::IResult;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,6 +23,7 @@ pub enum Segment {
     Text(String),
     Heading(usize, Vec<Segment>),
     Emphasis(Emphasis, Vec<Segment>),
+    Escaped(char),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -124,13 +125,26 @@ impl IntoView for Segment {
                 </div>
             }
             .into_view(),
+            Self::Escaped(char) => view! {
+                <div class="inline">
+                    <div class="inline text-fade">"\\"</div>
+                    {char}
+                </div>
+            }
+            .into_view(),
         }
     }
 }
 
 impl Segment {
     fn parse(input: &str) -> IResult<&str, Self> {
-        alt((Self::heading, Self::text, Self::bold, Self::italic))(input)
+        alt((
+            Self::heading,
+            Self::escaped,
+            Self::text,
+            Self::bold,
+            Self::italic,
+        ))(input)
     }
     fn heading(input: &str) -> IResult<&str, Self> {
         (map(
@@ -169,9 +183,7 @@ impl Segment {
     }
 
     fn text(input: &str) -> IResult<&str, Self> {
-        map(take_till1(|char| "#*".contains(char)), |text: &str| {
-            Self::Text(text.to_string())
-        })(input)
+        map(is_not("*#\\"), |text: &str| Self::Text(text.to_string()))(input)
     }
 
     fn emphasis(emphasis: Emphasis) -> impl Fn(&str) -> IResult<&str, Self> {
@@ -188,6 +200,12 @@ impl Segment {
                 |segments| Self::Emphasis(emphasis, segments),
             )(input)
         }
+    }
+
+    fn escaped(input: &str) -> IResult<&str, Self> {
+        map(preceded(char('\\'), one_of("*#\\")), |char| {
+            Self::Escaped(char)
+        })(input)
     }
 }
 

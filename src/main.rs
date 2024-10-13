@@ -358,7 +358,14 @@ fn Overlay(overlay: NodeRef<Div>) -> impl IntoView {
                                                         if start.0 == end.0 {
                                                             if start.0 == index { end.1 - start.1 } else { 0 }
                                                         } else if index > start.0 && index < end.0 {
-                                                            length
+                                                            #[allow(
+                                                                clippy::cast_sign_loss,
+                                                                clippy::cast_possible_truncation
+                                                            )]
+                                                            {
+                                                                chars_per_line() as usize
+                                                                    - if start.0 == index { start.1 } else { 0 }
+                                                            }
                                                         } else if index == start.0 {
                                                             length - start.1
                                                         } else if index == end.0 {
@@ -379,24 +386,23 @@ fn Overlay(overlay: NodeRef<Div>) -> impl IntoView {
                 <div class="absolute top-0 z-10 size-full">
                     {move || {
                         let text = text();
-                        let document = if let Ok((_, document)) = all_consuming(
-                            Document::parse,
-                        )(&text) {
-                            dbg!(document).into_view()
-                        } else {
-                            text.lines()
-                                .map(|line| {
-                                    view! {
-                                        <div>
-                                            {if line.is_empty() {
-                                                " ".to_string()
-                                            } else {
-                                                line.to_string()
-                                            }}
-                                        </div>
-                                    }
-                                })
-                                .collect_view()
+                        let document = match all_consuming(Document::parse)(&text) {
+                            Ok((_, document)) => document.into_view(),
+                            Err(_) => {
+                                text.lines()
+                                    .map(|line| {
+                                        view! {
+                                            <div>
+                                                {if line.is_empty() {
+                                                    " ".to_string()
+                                                } else {
+                                                    line.to_string()
+                                                }}
+                                            </div>
+                                        }
+                                    })
+                                    .collect_view()
+                            }
                         };
                         document
                     }}
@@ -632,6 +638,51 @@ fn StatusBar() -> impl IntoView {
                             (move |()| !show_find_input()).into(),
                             (move || {
                                 view! {
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
                                     // prop:value=find_text
                                     // on:input=move |_| {
                                     // find_matches();
