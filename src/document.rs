@@ -1,7 +1,7 @@
 use std::iter::once;
 use std::ops::{Deref, DerefMut};
 
-use leptos::html::{br, div, h1, h2, h3, h4, h5, h6, AnyElement};
+use leptos::html::{div, h1, h2, h3, h4, h5, h6, AnyElement};
 use leptos::{
     create_effect, create_node_ref, create_rw_signal, provide_context, use_context, view,
     CollectView, IntoView, NodeRef, RwSignal, SignalUpdate, View,
@@ -102,7 +102,7 @@ impl IntoView for Document {
 impl IntoView for Segment {
     fn into_view(self) -> View {
         match self {
-            Self::Text(text) => view! { <span>{text}</span> }.into_view(),
+            Self::Text(text) => view! { <div class="inline">{text}</div> }.into_view(),
             Self::Heading(depth, segments) => {
                 let hashes = "#".repeat(depth) + " ";
                 let heading: NodeRef<AnyElement> = create_node_ref();
@@ -125,7 +125,7 @@ impl IntoView for Segment {
                         _ => div().into_any(),
                     }
                         .node_ref(heading)
-                        .classes("inline-block font-bold")
+                        .classes("inline font-bold")
                         .child((view! { <div class="invisible inline">{&hashes}</div> }, segments))}
                 }
                 .into_view()
