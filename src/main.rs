@@ -10,10 +10,9 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use codee::{Decoder, Encoder};
-use document::Document;
+use document::{Document, Segment};
 use itertools::Itertools;
 use leptos::html::Div;
-use nom::combinator::all_consuming;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -384,8 +383,11 @@ fn Overlay(overlay: NodeRef<Div>) -> impl IntoView {
                 <div class="absolute top-0 z-10 size-full">
                     {move || {
                         let text = text();
-                        let document = match all_consuming(Document::parse)(&text) {
-                            Ok((_, document)) => document.into_view(),
+                        let document = match Document::parse(&text) {
+                            Ok((remaining, mut document)) => {
+                                document.push(Segment::Text(remaining.to_string()));
+                                document.into_view()
+                            }
                             Err(_) => {
                                 text.lines()
                                     .map(|line| {
@@ -634,6 +636,33 @@ fn StatusBar() -> impl IntoView {
                             (move |()| !show_find_input()).into(),
                             (move || {
                                 view! {
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
                                     // prop:value=find_text
                                     // on:input=move |_| {
                                     // find_matches();

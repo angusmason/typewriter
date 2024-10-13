@@ -1,9 +1,10 @@
 use std::iter::once;
+use std::ops::{Deref, DerefMut};
 
 use leptos::html::{div, h1, h2, h3, h4, h5, h6, AnyElement};
 use leptos::{
-    create_effect, create_node_ref, create_rw_signal, provide_context, use_context,
-    view, CollectView, IntoView, NodeRef, RwSignal, SignalUpdate, View,
+    create_effect, create_node_ref, create_rw_signal, provide_context, use_context, view,
+    CollectView, IntoView, NodeRef, RwSignal, SignalUpdate, View,
 };
 use nom::branch::alt;
 use nom::bytes::complete::{is_not, tag, take_until1};
@@ -53,6 +54,20 @@ impl Document {
         map(many0(Segment::parse), |segments| Self {
             segments: { segments },
         })(input)
+    }
+}
+
+impl Deref for Document {
+    type Target = Vec<Segment>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.segments
+    }
+}
+
+impl DerefMut for Document {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.segments
     }
 }
 
