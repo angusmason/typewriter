@@ -416,6 +416,12 @@ fn StatusBar() -> impl IntoView {
         selection,
     } = use_context().unwrap();
     let command_pressed = RwSignal::new(false);
+
+    let find_text = create_rw_signal(String::new());
+    let matches = create_rw_signal(Vec::new());
+    let current_match_index = create_rw_signal(0);
+    let show_find_input = create_rw_signal(false);
+
     create_effect(move |_| {
         spawn_local({
             async move {
@@ -431,16 +437,15 @@ fn StatusBar() -> impl IntoView {
     window_event_listener(keydown, move |event| {
         if event.meta_key() {
             command_pressed.set(true);
+            show_find_input.set(false);
+            find_text.set(String::new());
+            matches.set(Vec::new());
+            current_match_index.set(0);
         }
     });
     window_event_listener(keyup, move |_| {
         command_pressed.set(false);
     });
-
-    let find_text = create_rw_signal(String::new());
-    let matches = create_rw_signal(Vec::new());
-    let current_match_index = create_rw_signal(0);
-    let show_find_input = create_rw_signal(false);
 
     let shortcuts = [
         shortcut!(
