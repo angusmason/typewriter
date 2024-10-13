@@ -1,5 +1,12 @@
-use leptos::html::{h1, h2, h3, h4, h5, h6};
-use leptos::{view, IntoView, View};
+use std::iter::once;
+
+use crate::dbg;
+use itertools::Itertools;
+use leptos::html::{div, h1, h2, h3, h4, h5, h6, AnyElement};
+use leptos::{
+    create_effect, create_node_ref, create_rw_signal, provide_context, use_context, view,
+    CollectView, IntoView, NodeRef, RwSignal, SignalUpdate, View,
+};
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_till1, take_until1};
 use nom::character::complete::newline;
@@ -52,7 +59,28 @@ impl Document {
 
 impl IntoView for Document {
     fn into_view(self) -> View {
-        self.segments.into_view()
+        let headings = create_rw_signal(Vec::<(i32, usize)>::new());
+        provide_context(headings);
+        view! {
+            {self.segments}
+            {move || {
+                let headings = headings();
+                let min = headings.iter().map(|(offset, _)| *offset).min().unwrap_or_default();
+                headings
+                    .into_iter()
+                    .map(|(offset, depth)| {
+                        view! {
+                            <div
+                                style:top=format!("{}px", offset - min)
+                                class="absolute -left-16 w-12 [*:has(&)]:overflow-visible flex justify-end pointer-events-none"
+                            >
+                                {"#".repeat(depth) + " "}
+                            </div>
+                        }
+                    })
+                    .collect_view()
+            }}
+        }.into_view()
     }
 }
 
@@ -62,20 +90,28 @@ impl IntoView for Segment {
             Self::Text(text) => view! { <span>{text}</span> }.into_view(),
             Self::Heading(depth, segments) => {
                 let hashes = "#".repeat(depth) + " ";
-                match depth {
-                    1 => h1().into_any(),
-                    2 => h2().into_any(),
-                    3 => h3().into_any(),
-                    4 => h4().into_any(),
-                    5 => h5().into_any(),
-                    6 => h6().into_any(),
-                    _ => {
-                        return view! { <div class="inline font-bold">{hashes}{segments}</div> }
-                            .into_view()
+                let heading: NodeRef<AnyElement> = create_node_ref();
+                create_effect(move |_| {
+                    use_context::<RwSignal<Vec<_>>>()
+                        .unwrap()
+                        .update(|headings| {
+                            headings.push((heading().unwrap().offset_top(), depth));
+                        });
+                });
+                view! {
+                    {match depth {
+                        1 => h1().into_any(),
+                        2 => h2().into_any(),
+                        3 => h3().into_any(),
+                        4 => h4().into_any(),
+                        5 => h5().into_any(),
+                        6 => h6().into_any(),
+                        _ => div().into_any(),
                     }
+                        .node_ref(heading)
+                        .classes("inline font-bold")
+                        .child((view! { <div class="inline text-fade">{&hashes}</div> }, segments))}
                 }
-                .child((hashes, segments))
-                .classes("font-bold")
                 .into_view()
             }
             Self::Emphasis(emphasis, segments) => view! {
@@ -114,7 +150,15 @@ impl Segment {
                     },
                 ),
             ),
-            |(depth, segments)| Self::Heading(depth, segments),
+            |(depth, segments)| {
+                Self::Heading(
+                    depth,
+                    segments
+                        .into_iter()
+                        .chain(once(Self::Text("\n".to_string())))
+                        .collect(),
+                )
+            },
         ))(input)
     }
 

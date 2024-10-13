@@ -180,7 +180,7 @@ pub fn App() -> impl IntoView {
             class="h-full text-text bg-background caret-caret [&_*]:[font-synthesis:none] [&_*]:[font-variant-ligatures:none] px-80 pb-4"
             gap=6
         >
-            <div data-tauri-drag-region class="absolute top-0 z-10 w-full h-12" />
+            <div data-tauri-drag-region class="absolute inset-x-0 top-0 z-30 h-12" />
             <div class="relative size-full">
                 <Overlay overlay=overlay />
                 <textarea
@@ -280,7 +280,7 @@ fn Overlay(overlay: NodeRef<Div>) -> impl IntoView {
             "h"
         </div>
         <div
-            class="absolute top-0 left-0 pt-20 overflow-y-auto text-sm break-all whitespace-pre-wrap size-full"
+            class="absolute top-0 left-0 pt-20 overflow-y-auto [&_*]:text-sm break-all whitespace-pre-wrap size-full"
             ref=overlay
         >
             <div class="relative size-full">
