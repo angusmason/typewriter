@@ -202,14 +202,14 @@ pub fn App() -> impl IntoView {
     };
     view! {
         <Vertical
-            class="h-full text-text bg-background caret-caret [&_*]:[font-synthesis:none] [&_*]:[font-variant-ligatures:none] px-80 pb-4"
+            class="h-full text-text bg-background caret-caret [&_*]:[font-synthesis:none] [&_*]:[font-variant-ligatures:none] pb-4"
             gap=6
         >
             <div data-tauri-drag-region class="absolute inset-x-0 top-0 z-30 h-12" />
             <div class="relative size-full">
                 <Overlay overlay=overlay />
                 <textarea
-                    class="absolute top-0 left-0 z-20 pt-20 overflow-y-auto text-sm text-transparent break-all whitespace-pre-wrap bg-transparent outline-none resize-none size-full overscroll-none selection:bg-transparent"
+                    class="absolute top-0 left-0 z-20 pt-20 overflow-y-auto text-sm text-transparent break-all whitespace-pre-wrap bg-transparent outline-none resize-none size-full overscroll-none px-80 selection:bg-transparent"
                     prop:value=text
                     autocorrect="off"
                     on:input=move |event| {
@@ -276,8 +276,9 @@ fn Overlay(overlay: NodeRef<Div>) -> impl IntoView {
         text, selection, ..
     } = use_context().unwrap();
     let char: NodeRef<Div> = create_node_ref();
+    let width_measure: NodeRef<Div> = create_node_ref();
     let chars_per_line = move || {
-        overlay().unwrap().get_bounding_client_rect().width()
+        width_measure().unwrap().get_bounding_client_rect().width()
             / char().unwrap().get_bounding_client_rect().width()
     };
     let wrapped_lengths = move || {
@@ -305,10 +306,10 @@ fn Overlay(overlay: NodeRef<Div>) -> impl IntoView {
             "h"
         </div>
         <div
-            class="absolute top-0 left-0 pt-20 overflow-y-auto [&_*]:text-sm break-all whitespace-pre-wrap size-full"
+            class="absolute top-0 left-0 pt-20 overflow-y-auto [&_*]:text-sm break-all whitespace-pre-wrap px-80 size-full"
             ref=overlay
         >
-            <div class="relative size-full">
+            <div class="relative size-full" ref=width_measure>
                 <div class="absolute top-0 size-full">
                     {move || {
                         let char_to_position = move |char: usize| {
@@ -581,7 +582,7 @@ fn StatusBar() -> impl IntoView {
     });
 
     view! {
-        <div class="text-xs text-right cursor-default select-none text-fade">
+        <div class="text-xs text-right cursor-default select-none px-80 text-fade">
             <Horizontal class="justify-between">
                 <div class="h-6">
                     <Match cases=[
@@ -638,6 +639,42 @@ fn StatusBar() -> impl IntoView {
                             (move |()| !show_find_input()).into(),
                             (move || {
                                 view! {
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
                                     // prop:value=find_text
                                     // on:input=move |_| {
                                     // find_matches();
