@@ -211,7 +211,7 @@ pub fn App() -> impl IntoView {
             <div class="relative size-full">
                 <Overlay overlay=overlay />
                 <textarea
-                    class="absolute top-0 left-0 z-20 pt-20 overflow-y-auto text-sm break-all whitespace-pre-wrap bg-transparent outline-none resize-none size-full overscroll-none px-80 selection:bg-transparent"
+                    class="absolute top-0 left-0 z-20 pt-20 pb-96 overflow-y-auto text-sm break-all whitespace-pre-wrap bg-transparent outline-none resize-none size-full overscroll-none px-80 selection:bg-transparent"
                     prop:value=text
                     autocorrect="off"
                     on:input=move |event| {

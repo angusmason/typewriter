@@ -126,7 +126,7 @@ impl IntoView for Segment {
                     }
                         .node_ref(heading)
                         .classes("inline-block font-bold")
-                        .child((view! { <div class="invisible inline">{&hashes}</div> }, segments))}
+                        .child((view! { <div class="hidden inline">{&hashes}</div> }, segments))}
                 }
                 .into_view()
             }
