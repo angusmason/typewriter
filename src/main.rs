@@ -585,17 +585,18 @@ fn StatusBar() -> impl IntoView {
                                     <Horizontal gap=1>
                                         <div class="text-text">"find:"</div>
                                         <input
-                                            type="text"
-                                            class="select-text text-text bg-background cursor-text selection:bg-highlight"
-                                            prop:value=find_text
-                                            on:input=move |_| {
-                                                find_matches();
-                                            }
-                                            on:keydown=move |event| {
-                                                if event.key() == "Enter" {
-                                                    move_to_next_match();
-                                                }
-                                            }
+                                        type="text"
+                                        class="select-text text-text bg-background cursor-text outline-none selection:bg-highlight"
+                                        autocorrect="off"
+                                        // prop:value=find_text
+                                        // on:input=move |_| {
+                                        // find_matches();
+                                        // }
+                                        // on:keydown=move |event| {
+                                        // if event.key() == "Enter" {
+                                        // move_to_next_match();
+                                        // }
+                                        // }
                                         />
                                     </Horizontal>
                                 }
@@ -606,6 +607,20 @@ fn StatusBar() -> impl IntoView {
                             (move |()| !show_find_input()).into(),
                             (move || {
                                 view! {
+                                    // <input
+                                    // type="text"
+                                    // class="select-text text-text bg-background cursor-text selection:bg-highlight"
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
+                                    // />
+                                    // Basic input handler
                                     <Horizontal gap=1>
                                         {move || {
                                             let path = PathBuf::from(read_save_path());
