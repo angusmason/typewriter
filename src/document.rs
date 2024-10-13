@@ -1,24 +1,27 @@
+use leptos::html::{h1, h2, h3, h4, h5, h6};
+use leptos::{view, IntoView, View};
 use nom::branch::alt;
-use nom::bytes::complete::{tag, take_until1, take_while1};
+use nom::bytes::complete::{tag, take_till1, take_until1};
+use nom::character::complete::newline;
 use nom::combinator::{map, map_res, rest};
 use nom::multi::{many0, many1, many1_count};
-use nom::sequence::{delimited, separated_pair};
+use nom::sequence::{delimited, separated_pair, tuple};
 use nom::IResult;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Document {
+pub struct Document {
     segments: Vec<Segment>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum Segment {
+pub enum Segment {
     Text(String),
     Heading(usize, Vec<Segment>),
     Emphasis(Emphasis, Vec<Segment>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Emphasis {
+pub enum Emphasis {
     Bold,
     Italic,
 }
@@ -40,10 +43,54 @@ impl Emphasis {
 }
 
 impl Document {
-    fn parse(input: &str) -> IResult<&str, Self> {
+    pub fn parse(input: &str) -> IResult<&str, Self> {
         map(many0(Segment::parse), |segments| Self {
             segments: { segments },
         })(input)
+    }
+}
+
+impl IntoView for Document {
+    fn into_view(self) -> View {
+        self.segments.into_view()
+    }
+}
+
+impl IntoView for Segment {
+    fn into_view(self) -> View {
+        match self {
+            Self::Text(text) => view! { <span>{text}</span> }.into_view(),
+            Self::Heading(depth, segments) => {
+                let hashes = "#".repeat(depth) + " ";
+                match depth {
+                    1 => h1().into_any(),
+                    2 => h2().into_any(),
+                    3 => h3().into_any(),
+                    4 => h4().into_any(),
+                    5 => h5().into_any(),
+                    6 => h6().into_any(),
+                    _ => {
+                        return view! { <div class="inline font-bold">{hashes}{segments}</div> }
+                            .into_view()
+                    }
+                }
+                .child((hashes, segments))
+                .classes("font-bold")
+                .into_view()
+            }
+            Self::Emphasis(emphasis, segments) => view! {
+                <div
+                    class="inline"
+                    class=("font-bold", emphasis == Emphasis::Bold)
+                    class=("italic", emphasis == Emphasis::Italic)
+                >
+                    <div class="inline text-fade">{emphasis.delimiter()}</div>
+                    {segments}
+                    <div class="inline text-fade">{emphasis.delimiter()}</div>
+                </div>
+            }
+            .into_view(),
+        }
     }
 }
 
@@ -56,10 +103,16 @@ impl Segment {
             separated_pair(
                 many1_count(tag("#")),
                 tag(" "),
-                map_res(alt((take_until1("\n"), rest)), |text| {
-                    many1(alt((Self::bold, Self::italic, Self::text)))(text)
-                        .map(|(_, segments)| segments)
-                }),
+                map_res(
+                    alt((
+                        map(tuple((take_until1("\n"), newline)), |(text, _)| text),
+                        rest,
+                    )),
+                    |text| {
+                        many1(alt((Self::bold, Self::italic, Self::text)))(text)
+                            .map(|(_, segments)| segments)
+                    },
+                ),
             ),
             |(depth, segments)| Self::Heading(depth, segments),
         ))(input)
@@ -74,10 +127,9 @@ impl Segment {
     }
 
     fn text(input: &str) -> IResult<&str, Self> {
-        map(
-            take_while1(|char: char| char.is_alphanumeric() || char.is_whitespace() || char == '#'),
-            |text: &str| Self::Text(text.to_string()),
-        )(input)
+        map(take_till1(|char| "#*".contains(char)), |text: &str| {
+            Self::Text(text.to_string())
+        })(input)
     }
 
     fn emphasis(emphasis: Emphasis) -> impl Fn(&str) -> IResult<&str, Self> {

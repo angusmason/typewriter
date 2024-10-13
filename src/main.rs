@@ -8,8 +8,10 @@ use std::borrow::Cow;
 use std::path::PathBuf;
 
 use codee::string::FromToStringCodec;
+use document::Document;
 use itertools::Itertools;
 use leptos::html::Div;
+use nom::combinator::all_consuming;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -31,6 +33,7 @@ use wasm_bindgen::JsValue;
 use web_sys::HtmlTextAreaElement;
 
 #[allow(unused_macros)]
+#[macro_export]
 macro_rules! dbg {
     () => {
         leptos::logging::log!("[{}:{}:{}]", file!(), line!(), column!())
@@ -351,19 +354,26 @@ fn Overlay(overlay: NodeRef<Div>) -> impl IntoView {
                 <div class="absolute top-0 z-10 size-full">
                     {move || {
                         let text = text();
-                        text.lines()
-                            .map(|line| {
-                                view! {
-                                    <div>
-                                        {if line.is_empty() {
-                                            " ".to_string()
-                                        } else {
-                                            line.to_string()
-                                        }}
-                                    </div>
-                                }
-                            })
-                            .collect_view()
+                        let document = if let Ok((_, document)) = all_consuming(
+                            Document::parse,
+                        )(&text) {
+                            dbg!(document).into_view()
+                        } else {
+                            text.lines()
+                                .map(|line| {
+                                    view! {
+                                        <div>
+                                            {if line.is_empty() {
+                                                " ".to_string()
+                                            } else {
+                                                line.to_string()
+                                            }}
+                                        </div>
+                                    }
+                                })
+                                .collect_view()
+                        };
+                        document
                     }}
                 </div>
             </div>
