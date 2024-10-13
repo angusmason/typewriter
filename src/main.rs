@@ -5,9 +5,11 @@ mod document;
 
 use std::array::from_fn;
 use std::borrow::Cow;
-use std::path::PathBuf;
+use std::convert::Infallible;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
-use codee::string::FromToStringCodec;
+use codee::{Decoder, Encoder};
 use document::Document;
 use itertools::Itertools;
 use leptos::html::Div;
@@ -82,7 +84,7 @@ impl Inter {
     /// user cancelled the save by closing the dialog.
     ///
     /// Panics if the data couldn't be written.
-    async fn save_file(data: String, path: Option<PathBuf>) -> Option<String> {
+    async fn save_file(data: String, path: Option<PathBuf>) -> Option<PathBuf> {
         #[derive(Serialize)]
         struct SaveFileArgs {
             data: String,
@@ -117,10 +119,34 @@ impl Inter {
 #[derive(Clone)]
 struct Context {
     text: RwSignal<String>,
-    save_path: (Signal<String>, WriteSignal<String>),
+    save_path: (Signal<Option<PathBuf>>, WriteSignal<Option<PathBuf>>),
     save: Action<bool, ()>,
     unsaved: RwSignal<bool>,
     selection: RwSignal<Option<(usize, usize)>>,
+}
+
+
+pub struct PathBufCodec;
+
+impl Encoder<Option<PathBuf>> for PathBufCodec {
+    type Error = ();
+    type Encoded = String;
+
+    fn encode(path: &Option<PathBuf>) -> Result<String, Self::Error> {
+        Ok(path.as_deref().map(Path::to_str).map(Option::unwrap).unwrap_or_default().to_string())
+    }
+}
+
+impl Decoder<Option<PathBuf>> for PathBufCodec {
+    type Error = Infallible;
+    type Encoded = str;
+
+    fn decode(string: &Self::Encoded) -> Result<Option<PathBuf>, Self::Error> {
+        if string.is_empty() {
+            return Ok(None);
+        }
+        PathBuf::from_str(string).map(Some)
+    }
 }
 
 #[component]
@@ -128,22 +154,21 @@ struct Context {
 pub fn App() -> impl IntoView {
     let text = create_rw_signal(String::new());
     let (read_save_path, write_save_path, _) =
-        use_local_storage::<String, FromToStringCodec>("save_path");
+        use_local_storage::<Option<PathBuf>, PathBufCodec>("save_path");
     let unsaved = create_rw_signal(false);
     let save = create_action(move |save_as| {
         let save_as: bool = *save_as;
         async move {
             let Some(path) = Inter::save_file(
                 text.get_untracked(),
-                Some(read_save_path.get_untracked())
-                    .filter(|path| !save_as && !path.is_empty())
-                    .map(PathBuf::from),
+                read_save_path.get_untracked()
+                    .filter(|_| !save_as),
             )
             .await
             else {
                 return;
             };
-            write_save_path(path);
+            write_save_path(Some(path));
             unsaved.set(false);
         }
     });
@@ -166,7 +191,7 @@ pub fn App() -> impl IntoView {
     create_effect(move |_| {
         let read_save_path = read_save_path();
         spawn_local(async move {
-            original.set(Some(Inter::load_file(Some(read_save_path.into())).await.0));
+            original.set(Some(Inter::load_file(read_save_path).await.0));
         });
     });
     let overlay = create_node_ref();
@@ -426,7 +451,7 @@ fn StatusBar() -> impl IntoView {
         spawn_local({
             async move {
                 let (Some(data), _) =
-                    Inter::load_file(Some(read_save_path.get_untracked().into())).await
+                    Inter::load_file(read_save_path.get_untracked()).await
                 else {
                     return;
                 };
@@ -461,7 +486,7 @@ fn StatusBar() -> impl IntoView {
             c-'n';
             "New" => {
                 text.set(String::new());
-                write_save_path(String::new());
+                write_save_path(None);
             }
         ),
         shortcut!(
@@ -472,7 +497,7 @@ fn StatusBar() -> impl IntoView {
                         return;
                     };
                     text.set(data);
-                    write_save_path(path.to_str().unwrap().to_string());
+                    write_save_path(Some(path));
                     command_pressed.set(false);
                 });
             }
@@ -585,19 +610,19 @@ fn StatusBar() -> impl IntoView {
                                     <Horizontal gap=1>
                                         <div class="text-text">"find:"</div>
                                         <input
-                                        type="text"
-                                        class="select-text text-text bg-background cursor-text outline-none selection:bg-highlight"
-                                        autocorrect="off"
-                                        // prop:value=find_text
-                                        // on:input=move |_| {
-                                        // find_matches();
-                                        // }
-                                        // on:keydown=move |event| {
-                                        // if event.key() == "Enter" {
-                                        // move_to_next_match();
-                                        // }
-                                        // }
+                                            type="text"
+                                            class="outline-none select-text text-text bg-background cursor-text selection:bg-highlight"
+                                            autocorrect="off"
                                         />
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
                                     </Horizontal>
                                 }
                             })
@@ -607,6 +632,60 @@ fn StatusBar() -> impl IntoView {
                             (move |()| !show_find_input()).into(),
                             (move || {
                                 view! {
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
+                                    // prop:value=find_text
+                                    // on:input=move |_| {
+                                    // find_matches();
+                                    // }
+                                    // on:keydown=move |event| {
+                                    // if event.key() == "Enter" {
+                                    // move_to_next_match();
+                                    // }
+                                    // }
                                     // <input
                                     // type="text"
                                     // class="select-text text-text bg-background cursor-text selection:bg-highlight"
@@ -623,18 +702,20 @@ fn StatusBar() -> impl IntoView {
                                     // Basic input handler
                                     <Horizontal gap=1>
                                         {move || {
-                                            let path = PathBuf::from(read_save_path());
+                                            let path = read_save_path()?;
                                             let mut components = path.components();
                                             let mut components: [_; 4] = from_fn(|_| {
                                                 components.next_back()
                                             });
                                             components.reverse();
-                                            components
-                                                .into_iter()
-                                                .flatten()
-                                                .collect::<PathBuf>()
-                                                .to_string_lossy()
-                                                .to_string()
+                                            Some(
+                                                components
+                                                    .into_iter()
+                                                    .flatten()
+                                                    .collect::<PathBuf>()
+                                                    .to_string_lossy()
+                                                    .to_string(),
+                                            )
                                         }} <Show when=unsaved>
                                             <div class="text-text">"*"</div>
                                         </Show>
