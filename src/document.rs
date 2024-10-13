@@ -86,7 +86,7 @@ impl IntoView for Document {
                         view! {
                             <div
                                 style:top=format!("{}px", offset - min)
-                                class="absolute flex justify-end w-12 pointer-events-none -left-16"
+                                class="absolute flex justify-end w-12 pointer-events-none font-bold -left-16"
                             >
                                 {"#".repeat(depth) + " "}
                             </div>
